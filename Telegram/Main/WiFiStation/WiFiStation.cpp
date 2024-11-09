@@ -55,6 +55,12 @@ void WiFiStation :: Run()
 
     strcpy ((char *) wifi_config.sta.ssid, WifiSsid);
     strcpy ((char *) wifi_config.sta.password, WifiPassword);
+    wifi_config.sta.scan_method = WIFI_FAST_SCAN;
+    wifi_config.sta.bssid_set = 0;
+    wifi_config.sta.channel = 0;
+    wifi_config.sta.sort_method = WIFI_CONNECT_AP_BY_SIGNAL;
+    wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+    wifi_config.sta.threshold.rssi = 0;
 
     ESP_ERROR_CHECK (esp_wifi_set_config (WIFI_IF_STA, &wifi_config));
 
