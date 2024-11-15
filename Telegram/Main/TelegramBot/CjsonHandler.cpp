@@ -2,9 +2,9 @@
 #include "cJSON.h"
 
 // -----------------------------------------------------------------------
-CjsonHandler :: CjsonHandler (const std :: string & s)
+CjsonHandler :: CjsonHandler (const char *s)
 {
-    root = cJSON_Parse (s.c_str());
+    root = cJSON_Parse (s);
 }
 
 // -----------------------------------------------------------------------

@@ -8,7 +8,7 @@ struct cJSON;
 class CjsonHandler
 {
     public:
-        CjsonHandler (const std :: string & s);
+        CjsonHandler (const char *s);
         ~CjsonHandler();
     
         const cJSON * getRoot() { return root; }

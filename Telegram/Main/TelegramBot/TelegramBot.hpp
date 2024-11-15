@@ -39,8 +39,6 @@ class TelegramBot
         HttpsClient client;
         std :: string basicUrl;
         
-        std :: string fullUrl;
-
         static const char * const TAG;
 };
 

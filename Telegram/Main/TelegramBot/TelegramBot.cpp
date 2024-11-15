@@ -3,6 +3,7 @@
 
 #include "TelegramBot.hpp"
 #include "StaticObjects.hpp"
+#include "AnswerParserGetMe.hpp"
 
 #include "esp_err.h"
 #include "cJSON.h"
@@ -75,8 +76,10 @@ TelegramBot :: States TelegramBot :: GetMe()
 {
     ESP_LOGI (TAG, "Begin GetMe");
 
-    fullUrl = basicUrl;
+    std::string fullUrl = basicUrl;
     fullUrl.append ("getMe");
+
+    ESP_LOGI (TAG, "GetMe url = %s", fullUrl.c_str());
 
     if (client.SetUrl (fullUrl.c_str()) != ESP_OK
         || client.Perform() != ESP_OK) 
@@ -86,47 +89,16 @@ TelegramBot :: States TelegramBot :: GetMe()
 
     ESP_LOGD (TAG, "Data received: \"%s\"", client.result.c_str());
 
-    bool res = false;
+    AnswerParserGetMe parser(client.result);
 
-    cJSON * jRoot = cJSON_Parse (client.result.c_str());
-
-    cJSON * jOk = jRoot -> child;
-    if (jOk != NULL
-        && strcmp (jOk -> string, "ok") == 0
-        && (jOk -> type & cJSON_True) != 0)
+    bool res = parser.getIsOk();
+    if (res) 
     {
-        ESP_LOGI (TAG, "GetMe ok");
-
-        std :: string newFirstname, newUsername;
-
-        cJSON * jResult = jOk -> next;
-        if (jResult != NULL)
-        {
-            for (cJSON * jEl = jResult -> child; jEl != NULL; jEl = jEl -> next)
-            {
-                if ((jEl -> type & cJSON_String) != 0)
-                {
-                    if (strcmp (jEl -> string, "first_name") == 0)
-                    {
-                        newFirstname = jEl -> valuestring;
-                    }
-                    else if (strcmp (jEl -> string, "username") == 0)
-                    {
-                        newUsername = jEl -> valuestring;
-                    }
-                }
-            }
-        }
-
-        Firstname = newFirstname;
-        Username = newUsername;
+        Firstname = parser.getFirstname();
+        Username = parser.getUsername();
 
         ESP_LOGI (TAG, "Got bot params: Firstname = \"%s\", Username = \"%s\"", Firstname.c_str(), Username.c_str());
-        res = true;
     }
-
-    cJSON_Delete (jRoot);
-    
     ESP_LOGD (TAG, "End GetMe");
 
     return res ? tgUpdate : tgStop;
@@ -137,8 +109,10 @@ TelegramBot :: States TelegramBot :: Update()
 {
     ESP_LOGI (TAG, "Begin Update");
     
-    fullUrl = basicUrl;
+    std::string fullUrl = basicUrl;
     fullUrl.append ("getUpdates");
+
+    ESP_LOGI (TAG, "Update url = %s", fullUrl.c_str());
 
     if (client.SetUrl (fullUrl.c_str()) != ESP_OK
         || client.Perform() != ESP_OK) 

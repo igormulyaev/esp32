@@ -4,7 +4,7 @@
 
 // -----------------------------------------------------------------------
 AnswerParserBase :: AnswerParserBase (const std :: string & s)
-    : json (s)
+    : json (s.c_str())
     , isOk (false)
     , result (NULL)
 {}
