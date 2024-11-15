@@ -16,6 +16,7 @@ void HttpsClient :: Init (const char * url)
         .event_handler = EventHandler,
         .transport_type = HTTP_TRANSPORT_OVER_SSL,
         .user_data = this,
+        .skip_cert_common_name_check = false,
     };
 
     clientHandle = esp_http_client_init (&cfg);
