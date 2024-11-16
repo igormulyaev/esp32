@@ -4,6 +4,7 @@
 #include "TelegramBot.hpp"
 #include "StaticObjects.hpp"
 #include "AnswerParserGetMe.hpp"
+#include "AnswerParserUpdate.hpp"
 
 #include "esp_err.h"
 #include "cJSON.h"
@@ -92,8 +93,8 @@ TelegramBot :: States TelegramBot :: GetMe()
 
     AnswerParserGetMe parser(client.result);
 
-    bool res = parser.getIsOk();
-    if (res) 
+    bool isOk = parser.getIsOk();
+    if (isOk) 
     {
         Firstname = parser.getFirstname();
         Username = parser.getUsername();
@@ -102,7 +103,7 @@ TelegramBot :: States TelegramBot :: GetMe()
     }
     ESP_LOGI (TAG, "End GetMe");
 
-    return res ? tgUpdate : tgStop;
+    return isOk ? tgUpdate : tgStop;
 }
 
 // -----------------------------------------------------------------------
@@ -123,6 +124,15 @@ TelegramBot :: States TelegramBot :: Update()
     }
 
     ESP_LOGI (TAG, "Data received: \"%s\"", client.result.c_str());
+
+    AnswerParserUpdate parser(client.result);
+
+    bool isOk = parser.getIsOk();
+
+    if (isOk)
+    {
+        ESP_LOGI (TAG, "Update ok");
+    }
     ESP_LOGI (TAG, "End Update");
     return tgStop;
 }
@@ -134,7 +144,7 @@ TelegramBot :: States TelegramBot :: Stop()
     
     client.Cleanup();
     
-    ESP_LOGD (TAG, "End Stop");
+    ESP_LOGI (TAG, "End Stop");
     
     return tgExit;
 }

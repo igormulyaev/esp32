@@ -12,6 +12,7 @@ idf_component_register (
         "TelegramBot/CjsonHandler.cpp"
         "TelegramBot/AnswerParserBase.cpp"
         "TelegramBot/AnswerParserGetMe.cpp"
+        "TelegramBot/AnswerParserUpdate.cpp"
         "secret_data.cpp"
     INCLUDE_DIRS "."
     EMBED_TXTFILES telegram.org.pem
