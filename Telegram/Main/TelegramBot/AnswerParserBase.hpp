@@ -9,8 +9,6 @@ class AnswerParserBase
         AnswerParserBase (const std :: string & s);
         virtual ~AnswerParserBase() {};
 
-        virtual void Parse();
-
         bool getIsOk() { return isOk; }
 
     protected:

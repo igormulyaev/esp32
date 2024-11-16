@@ -5,13 +5,7 @@
 // -----------------------------------------------------------------------
 AnswerParserGetMe :: AnswerParserGetMe (const std :: string & s)
     : AnswerParserBase (s)
-{}
-
-// -----------------------------------------------------------------------
-void AnswerParserGetMe :: Parse()
 {
-    AnswerParserBase :: Parse();
-
     if (isOk)
     {
         for (cJSON * jEl = result -> child; jEl != NULL; jEl = jEl -> next)

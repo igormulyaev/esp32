@@ -9,8 +9,6 @@ class AnswerParserGetMe : public AnswerParserBase
         AnswerParserGetMe(const std :: string & s);
         virtual ~AnswerParserGetMe() {};
 
-        virtual void Parse();
-
         std :: string getUsername() { return username; }
         std :: string getFirstname() { return firstname; }
 

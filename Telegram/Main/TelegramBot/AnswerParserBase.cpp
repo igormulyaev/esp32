@@ -7,10 +7,6 @@ AnswerParserBase :: AnswerParserBase (const std :: string & s)
     : json (s.c_str())
     , isOk (false)
     , result (NULL)
-{}
-
-// -----------------------------------------------------------------------
-void AnswerParserBase :: Parse()
 {
     const cJSON * jRoot = json.getRoot();
 
@@ -29,4 +25,3 @@ void AnswerParserBase :: Parse()
         }
     }
 }
-

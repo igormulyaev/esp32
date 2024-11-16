@@ -92,8 +92,6 @@ TelegramBot :: States TelegramBot :: GetMe()
 
     AnswerParserGetMe parser(client.result);
 
-    parser.Parse();
-
     bool res = parser.getIsOk();
     if (res) 
     {
@@ -102,7 +100,7 @@ TelegramBot :: States TelegramBot :: GetMe()
 
         ESP_LOGI (TAG, "Got bot params: Firstname = \"%s\", Username = \"%s\"", Firstname.c_str(), Username.c_str());
     }
-    ESP_LOGD (TAG, "End GetMe");
+    ESP_LOGI (TAG, "End GetMe");
 
     return res ? tgUpdate : tgStop;
 }
