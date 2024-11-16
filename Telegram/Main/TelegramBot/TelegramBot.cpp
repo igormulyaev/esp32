@@ -79,17 +79,20 @@ TelegramBot :: States TelegramBot :: GetMe()
     std::string fullUrl = basicUrl;
     fullUrl.append ("getMe");
 
-    ESP_LOGI (TAG, "GetMe url = %s", fullUrl.c_str());
+    ESP_LOGD (TAG, "GetMe url = %s", fullUrl.c_str());
 
-    if (client.SetUrl (fullUrl.c_str()) != ESP_OK
+    if (client.SetUrl (fullUrl.c_str()) != ESP_OK 
         || client.Perform() != ESP_OK) 
     {
+        ESP_LOGE (TAG, "SetUrl or Perform error");
         return tgStop;
     }
 
     ESP_LOGD (TAG, "Data received: \"%s\"", client.result.c_str());
 
     AnswerParserGetMe parser(client.result);
+
+    parser.Parse();
 
     bool res = parser.getIsOk();
     if (res) 
@@ -117,11 +120,12 @@ TelegramBot :: States TelegramBot :: Update()
     if (client.SetUrl (fullUrl.c_str()) != ESP_OK
         || client.Perform() != ESP_OK) 
     {
+        ESP_LOGE (TAG, "SetUrl or Perform error");
         return tgStop;
     }
 
-    ESP_LOGD (TAG, "Data received: \"%s\"", client.result.c_str());
-    ESP_LOGD (TAG, "End Update");
+    ESP_LOGI (TAG, "Data received: \"%s\"", client.result.c_str());
+    ESP_LOGI (TAG, "End Update");
     return tgStop;
 }
 
