@@ -10,6 +10,7 @@ class AnswerParserUpdate : public AnswerParserBase
         virtual ~AnswerParserUpdate() {};
 
     private:
+        int lastUpdateId;
 };
 
 #endif // ANSWERPARSERUPDATE_HPP
