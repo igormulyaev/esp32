@@ -14,6 +14,7 @@
 TelegramBot :: TelegramBot() : 
     state (tgStart)
     , client (cert_pem_start)
+    , lastMsgId (0)
 {
 }
 
@@ -46,7 +47,7 @@ void TelegramBot :: Process()
             case tgGetMe:
                 state = GetMe();
                 break;
-            case tgUpdate:
+            case tgReadOldMessages:
                 state = Update();
                 break;
             case tgStop:
@@ -103,7 +104,7 @@ TelegramBot :: States TelegramBot :: GetMe()
     }
     ESP_LOGI (TAG, "End GetMe");
 
-    return isOk ? tgUpdate : tgStop;
+    return isOk ? tgReadOldMessages : tgStop;
 }
 
 // -----------------------------------------------------------------------
@@ -112,7 +113,12 @@ TelegramBot :: States TelegramBot :: Update()
     ESP_LOGI (TAG, "Begin Update");
     
     std::string fullUrl = basicUrl;
-    fullUrl.append ("getUpdates");
+    fullUrl += "getUpdates?limit=1";
+    if (lastMsgId != 0)
+    {
+        fullUrl += "&offset=";
+        fullUrl += std::to_string (lastMsgId + 1);
+    }
 
     ESP_LOGI (TAG, "Update url = %s", fullUrl.c_str());
 
@@ -127,14 +133,22 @@ TelegramBot :: States TelegramBot :: Update()
 
     AnswerParserUpdate parser(client.result);
 
-    bool isOk = parser.getIsOk();
-
-    if (isOk)
+    TelegramBot :: States rc = tgStop;
+    if (parser.getIsOk())
     {
         ESP_LOGI (TAG, "Update ok");
+
+        uint32_t lastUid = parser.getLastUpdateId();
+
+        if (lastUid != 0)
+        {
+            lastMsgId = lastUid;
+            rc = tgReadOldMessages;
+        }
     }
+    
     ESP_LOGI (TAG, "End Update");
-    return tgStop;
+    return rc;
 }
 
 // -----------------------------------------------------------------------

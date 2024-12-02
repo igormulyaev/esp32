@@ -19,7 +19,7 @@ class TelegramBot
         {
             tgStart = 0
             , tgGetMe
-            , tgUpdate
+            , tgReadOldMessages
             , tgStop
             , tgExit
         };
@@ -38,6 +38,7 @@ class TelegramBot
         // bot workdata
         HttpsClient client;
         std :: string basicUrl;
+        uint32_t lastMsgId;
         
         static const char * const TAG;
 };

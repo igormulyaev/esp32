@@ -9,8 +9,10 @@ class AnswerParserUpdate : public AnswerParserBase
         AnswerParserUpdate(const std :: string & s);
         virtual ~AnswerParserUpdate() {};
 
+        uint32_t getLastUpdateId() { return lastUpdateId; }
+
     private:
-        int lastUpdateId;
+        uint32_t lastUpdateId;
 };
 
 #endif // ANSWERPARSERUPDATE_HPP

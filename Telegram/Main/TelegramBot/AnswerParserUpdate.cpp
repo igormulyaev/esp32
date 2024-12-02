@@ -8,8 +8,10 @@ AnswerParserUpdate :: AnswerParserUpdate (const std :: string & s)
 {
     if (isOk)
     {
-        // Loop through messages
-        for (cJSON * jMsg = result -> child; jMsg != NULL; jMsg = jMsg -> next)
+        // Process the message (it should be only one)
+        cJSON * jMsg = result -> child;
+
+        if (jMsg != NULL)
         {
             // Loop through message elements
             for (cJSON * jMEl = jMsg -> child; jMEl != NULL; jMEl = jMEl -> next)
@@ -20,7 +22,6 @@ AnswerParserUpdate :: AnswerParserUpdate (const std :: string & s)
                         && strcmp (jMEl -> string, "update_id") == 0)
                     {
                         lastUpdateId = jMEl -> valueint;
-                        printf ("New update_id = %d\n", lastUpdateId);
                     }
                     else if (jMEl -> type & cJSON_Object
                         && strcmp (jMEl -> string, "message") == 0)
@@ -29,6 +30,11 @@ AnswerParserUpdate :: AnswerParserUpdate (const std :: string & s)
                         printf ("Message content\n");
                     }
                 }
+            }
+            
+            if (jMsg -> next != NULL)
+            {
+                // Not single message?
             }
         }
     }
