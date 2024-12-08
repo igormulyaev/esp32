@@ -138,12 +138,22 @@ TelegramBot :: States TelegramBot :: Update()
     {
         ESP_LOGI (TAG, "Update ok");
 
-        uint32_t lastUid = parser.getLastUpdateId();
+        uint32_t uid = parser.getUpdateId();
 
-        if (lastUid != 0)
+        if (uid != 0)
         {
-            lastMsgId = lastUid;
+            lastMsgId = uid;
             rc = tgReadOldMessages;
+
+            ESP_LOGI (TAG
+                , "uid = %lu, msg_id = %lu, from_id = %lu, from_first_name = \"%s\", date = %lu, text = \"%s\""
+                , uid
+                , parser.getMessageId()
+                , parser.getFromId()
+                , parser.getFromFirstName().c_str()
+                , parser.getDate()
+                , parser.getText().c_str()
+            );
         }
     }
     
