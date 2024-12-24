@@ -60,6 +60,23 @@ esp_err_t HttpsClient :: SetUrl (const char * url)
 }
 
 // ----------------------------------------------------------------------------------
+esp_err_t HttpsClient :: SetTimeoutMs (int timeoutMs)
+{
+    ESP_LOGD (TAG, "Begin SetTimeoutMs %d", timeoutMs);
+
+    esp_err_t rc = esp_http_client_set_timeout_ms (clientHandle, timeoutMs);
+
+    if (rc != ESP_OK)
+    {
+        ESP_LOGE (TAG, "SetTimeoutMs error");
+    }
+    
+    ESP_LOGD (TAG, "End SetTimeoutMs");
+    
+    return rc;
+}
+
+// ----------------------------------------------------------------------------------
 void HttpsClient :: Cleanup()
 {
     ESP_LOGD (TAG, "Begin Cleanup");

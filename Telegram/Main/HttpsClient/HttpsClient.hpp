@@ -24,6 +24,7 @@ class HttpsClient
         void Cleanup();
 
         esp_err_t SetUrl (const char * url);
+        esp_err_t SetTimeoutMs (int timeoutMs);
         
         std :: string result;
         

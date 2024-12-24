@@ -20,6 +20,7 @@ class TelegramBot
             tgStart = 0
             , tgGetMe
             , tgReadOldMessages
+            , tgReadMessage
             , tgStop
             , tgExit
         };

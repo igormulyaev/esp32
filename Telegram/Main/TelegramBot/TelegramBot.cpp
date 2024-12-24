@@ -48,6 +48,7 @@ void TelegramBot :: Process()
                 state = GetMe();
                 break;
             case tgReadOldMessages:
+            case tgReadMessage:
                 state = Update();
                 break;
             case tgStop:
@@ -67,6 +68,7 @@ TelegramBot :: States TelegramBot :: Start()
     ESP_LOGI (TAG, "Begin Start");
     
     client.Init (basicUrl.c_str());
+    client.SetTimeoutMs (70000);
     
     ESP_LOGD (TAG, "End Start");
     
@@ -119,6 +121,10 @@ TelegramBot :: States TelegramBot :: Update()
         fullUrl += "&offset=";
         fullUrl += std::to_string (lastMsgId + 1);
     }
+    if (state == tgReadMessage)
+    {
+        fullUrl += "&timeout=60";
+    }
 
     ESP_LOGI (TAG, "Update url = %s", fullUrl.c_str());
 
@@ -143,7 +149,7 @@ TelegramBot :: States TelegramBot :: Update()
         if (uid != 0)
         {
             lastMsgId = uid;
-            rc = tgReadOldMessages;
+            rc = state; // Keep the state
 
             ESP_LOGI (TAG
                 , "uid = %lu, msg_id = %lu, date = %lu, text = \"%s\""
@@ -165,6 +171,10 @@ TelegramBot :: States TelegramBot :: Update()
 
             TgChat const & chat = parser.getChat();
             ESP_LOGI (TAG, "Chat id = %llu", chat.id);
+        }
+        else
+        {
+            rc = tgReadMessage;
         }
     }
     
