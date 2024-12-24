@@ -21,21 +21,19 @@ TelegramBot :: TelegramBot() :
 // -----------------------------------------------------------------------
 void TelegramBot :: Init (const char *id, const char *key)
 {
-    ESP_LOGI (TAG, "Begin Init");
+    ESP_LOGI (TAG, "Init");
     
     basicUrl = "https://api.telegram.org/bot";
     basicUrl.append (id);
     basicUrl.append (":");
     basicUrl.append (key);
     basicUrl.append ("/");
-
-    ESP_LOGD (TAG, "End Init");
 }
 
 // -----------------------------------------------------------------------
 void TelegramBot :: Process()
 {
-    ESP_LOGI (TAG, "Begin Process");
+    ESP_LOGD (TAG, "Begin Process");
     
     while (state != tgExit) 
     {
@@ -65,12 +63,10 @@ void TelegramBot :: Process()
 // -----------------------------------------------------------------------
 TelegramBot :: States TelegramBot :: Start()
 {
-    ESP_LOGI (TAG, "Begin Start");
+    ESP_LOGI (TAG, "Start");
     
     client.Init (basicUrl.c_str());
     client.SetTimeoutMs (70000);
-    
-    ESP_LOGD (TAG, "End Start");
     
     return tgGetMe;
 }
@@ -78,7 +74,7 @@ TelegramBot :: States TelegramBot :: Start()
 // -----------------------------------------------------------------------
 TelegramBot :: States TelegramBot :: GetMe()
 {
-    ESP_LOGI (TAG, "Begin GetMe");
+    ESP_LOGI (TAG, "GetMe");
 
     std::string fullUrl = basicUrl;
     fullUrl.append ("getMe");
@@ -104,7 +100,7 @@ TelegramBot :: States TelegramBot :: GetMe()
 
         ESP_LOGI (TAG, "Got bot params: Firstname = \"%s\", Username = \"%s\"", Firstname.c_str(), Username.c_str());
     }
-    ESP_LOGI (TAG, "End GetMe");
+    ESP_LOGD (TAG, "End GetMe");
 
     return isOk ? tgReadOldMessages : tgStop;
 }
@@ -112,7 +108,7 @@ TelegramBot :: States TelegramBot :: GetMe()
 // -----------------------------------------------------------------------
 TelegramBot :: States TelegramBot :: Update()
 {
-    ESP_LOGI (TAG, "Begin Update");
+    ESP_LOGI (TAG, "Update %s", state == tgReadMessage ? "message" : "old messages");
     
     std::string fullUrl = basicUrl;
     fullUrl += "getUpdates?limit=1";
@@ -126,7 +122,7 @@ TelegramBot :: States TelegramBot :: Update()
         fullUrl += "&timeout=60";
     }
 
-    ESP_LOGI (TAG, "Update url = %s", fullUrl.c_str());
+    ESP_LOGD (TAG, "Update url = %s", fullUrl.c_str());
 
     if (client.SetUrl (fullUrl.c_str()) != ESP_OK
         || client.Perform() != ESP_OK) 
@@ -135,14 +131,14 @@ TelegramBot :: States TelegramBot :: Update()
         return tgStop;
     }
 
-    ESP_LOGI (TAG, "Data received: \"%s\"", client.result.c_str());
+    ESP_LOGD (TAG, "Data received: \"%s\"", client.result.c_str());
 
     AnswerParserUpdate parser(client.result);
 
     TelegramBot :: States rc = tgStop;
     if (parser.getIsOk())
     {
-        ESP_LOGI (TAG, "Update ok");
+        ESP_LOGD (TAG, "Update ok");
 
         uint32_t uid = parser.getUpdateId();
 
@@ -152,7 +148,7 @@ TelegramBot :: States TelegramBot :: Update()
             rc = state; // Keep the state
 
             ESP_LOGI (TAG
-                , "uid = %lu, msg_id = %lu, date = %lu, text = \"%s\""
+                , "Got message: uid = %lu, msg_id = %lu, date = %lu, text = \"%s\""
                 , uid
                 , parser.getMessageId()
                 , parser.getDate()
@@ -170,26 +166,27 @@ TelegramBot :: States TelegramBot :: Update()
             );
 
             TgChat const & chat = parser.getChat();
-            ESP_LOGI (TAG, "Chat id = %llu", chat.id);
+            ESP_LOGI (TAG, "Chat: id = %llu", chat.id);
         }
         else
         {
+            ESP_LOGI (TAG, "No messages");
             rc = tgReadMessage;
         }
     }
     
-    ESP_LOGI (TAG, "End Update");
+    ESP_LOGD (TAG, "End Update");
     return rc;
 }
 
 // -----------------------------------------------------------------------
 TelegramBot :: States TelegramBot :: Stop()
 {
-    ESP_LOGI (TAG, "Begin Stop");
+    ESP_LOGI (TAG, "Stop");
     
     client.Cleanup();
     
-    ESP_LOGI (TAG, "End Stop");
+    ESP_LOGD (TAG, "End Stop");
     
     return tgExit;
 }
