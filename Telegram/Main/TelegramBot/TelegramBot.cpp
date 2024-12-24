@@ -82,6 +82,7 @@ TelegramBot :: States TelegramBot :: GetMe()
     ESP_LOGD (TAG, "GetMe url = %s", fullUrl.c_str());
 
     if (client.SetUrl (fullUrl.c_str()) != ESP_OK 
+        || client.SetMethodGet() != ESP_OK
         || client.Perform() != ESP_OK) 
     {
         ESP_LOGE (TAG, "SetUrl or Perform error");
@@ -125,6 +126,7 @@ TelegramBot :: States TelegramBot :: Update()
     ESP_LOGD (TAG, "Update url = %s", fullUrl.c_str());
 
     if (client.SetUrl (fullUrl.c_str()) != ESP_OK
+        || client.SetMethodGet() != ESP_OK
         || client.Perform() != ESP_OK) 
     {
         ESP_LOGE (TAG, "SetUrl or Perform error");

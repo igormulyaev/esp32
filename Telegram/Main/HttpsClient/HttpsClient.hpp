@@ -2,15 +2,7 @@
 #define HTTPSCLIENT_HPP
 
 #include <string>
-
-// -----------------------------------------------------------------------
-struct esp_http_client;
-typedef struct esp_http_client *esp_http_client_handle_t;
-
-struct esp_http_client_event;
-typedef struct esp_http_client_event esp_http_client_event_t;
-
-typedef int esp_err_t;
+#include "esp_http_client.h"
 
 // -----------------------------------------------------------------------
 class HttpsClient
@@ -25,13 +17,19 @@ class HttpsClient
 
         esp_err_t SetUrl (const char * url);
         esp_err_t SetTimeoutMs (int timeoutMs);
-        
+
+        esp_err_t SetMethodGet() { if (!isMethodGet) return SetMethod(HTTP_METHOD_GET); return ESP_OK; }
+        esp_err_t SetMethodPost() { if (isMethodGet) return SetMethod(HTTP_METHOD_POST); return ESP_OK; }
+
         std :: string result;
         
     private:
         const char * certPem;
 
         esp_http_client_handle_t clientHandle = NULL;
+
+        bool isMethodGet = true;
+        esp_err_t SetMethod(esp_http_client_method_t method);
         
         static esp_err_t EventHandler(esp_http_client_event_t *evt);
 

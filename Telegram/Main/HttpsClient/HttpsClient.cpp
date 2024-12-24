@@ -2,7 +2,6 @@
 
 #include "esp_log.h"
 #include "esp_tls.h"
-#include "esp_http_client.h"
 
 // ----------------------------------------------------------------------------------
 void HttpsClient :: Init (const char * url)
@@ -13,6 +12,7 @@ void HttpsClient :: Init (const char * url)
     {
         .url = url,
         .cert_pem = certPem,
+        .method = HTTP_METHOD_GET,
         .event_handler = EventHandler,
         .transport_type = HTTP_TRANSPORT_OVER_SSL,
         .user_data = this,
@@ -25,6 +25,8 @@ void HttpsClient :: Init (const char * url)
     {
         ESP_LOGE (TAG, "Init failed");
     }
+    isMethodGet = true;
+    
     ESP_LOGD (TAG, "End Init");
 }
 
@@ -72,6 +74,27 @@ esp_err_t HttpsClient :: SetTimeoutMs (int timeoutMs)
     }
     
     ESP_LOGD (TAG, "End SetTimeoutMs");
+    
+    return rc;
+}
+
+// ----------------------------------------------------------------------------------
+esp_err_t HttpsClient :: SetMethod(esp_http_client_method_t method)
+{
+    ESP_LOGD (TAG, "Begin SetMethod");
+
+    esp_err_t rc = esp_http_client_set_method (clientHandle, method);
+
+    if (rc != ESP_OK)
+    {
+        ESP_LOGE (TAG, "SetMethod error");
+    }
+    else
+    {
+        isMethodGet = (method == HTTP_METHOD_GET);
+    }
+    
+    ESP_LOGD (TAG, "End SetMethod");
     
     return rc;
 }
