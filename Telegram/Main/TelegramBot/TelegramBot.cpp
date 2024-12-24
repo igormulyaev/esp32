@@ -146,14 +146,25 @@ TelegramBot :: States TelegramBot :: Update()
             rc = tgReadOldMessages;
 
             ESP_LOGI (TAG
-                , "uid = %lu, msg_id = %lu, from_id = %lu, from_first_name = \"%s\", date = %lu, text = \"%s\""
+                , "uid = %lu, msg_id = %lu, date = %lu, text = \"%s\""
                 , uid
                 , parser.getMessageId()
-                , parser.getFromId()
-                , parser.getFromFirstName().c_str()
                 , parser.getDate()
                 , parser.getText().c_str()
             );
+
+            TgUser const & from = parser.getFrom();
+            ESP_LOGI (TAG
+                , "From: id = %llu, first_name = \"%s\", last_name = \"%s\", username = \"%s\", language_code = \"%s\""
+                , from.id
+                , from.first_name.c_str()
+                , from.last_name.c_str()
+                , from.username.c_str()
+                , from.language_code.c_str()
+            );
+
+            TgChat const & chat = parser.getChat();
+            ESP_LOGI (TAG, "Chat id = %llu", chat.id);
         }
     }
     

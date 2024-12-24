@@ -3,8 +3,8 @@
 #include <cstring>
 
 // -----------------------------------------------------------------------
-AnswerParserUpdate :: AnswerParserUpdate (const std :: string & s)
-    : AnswerParserBase (s), update_id(0), message_id(0), from_id(0), date(0)
+AnswerParserUpdate :: AnswerParserUpdate (const std::string & s)
+    : AnswerParserBase (s), update_id(0), message_id(0), from(), chat(), date(0)
 {
     if (isOk)
     {
@@ -38,21 +38,12 @@ AnswerParserUpdate :: AnswerParserUpdate (const std :: string & s)
                         else if (jMsg -> type & cJSON_Object
                             && strcmp (jMsg -> string, "from") == 0)
                         {
-                            for (cJSON * jFrom = jMsg -> child; 
-                                jFrom != NULL && jFrom -> string != NULL; 
-                                jFrom = jFrom -> next)
-                            {
-                                if (jFrom -> type & cJSON_Number
-                                    && strcmp(jFrom -> string, "id") == 0)
-                                {
-                                    from_id = jFrom ->valueint;
-                                }
-                                else if (jFrom -> type & cJSON_String
-                                    && strcmp(jFrom -> string, "first_name") == 0)
-                                {
-                                    from_first_name = jFrom -> valuestring;
-                                }
-                            }
+                            from.populatefromJson(jMsg);
+                        }
+                        else if (jMsg -> type & cJSON_Object
+                            && strcmp (jMsg -> string, "chat") == 0)
+                        {
+                            chat.populatefromJson(jMsg);
                         }
                         else if (jMsg -> type & cJSON_Number
                             && strcmp (jMsg -> string, "date") == 0)
