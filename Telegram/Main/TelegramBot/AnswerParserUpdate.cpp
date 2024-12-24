@@ -66,31 +66,3 @@ AnswerParserUpdate :: AnswerParserUpdate (const std::string & s)
         }
     }
 }
-
-/*
-{
-    "ok":true
-    ,"result":[
-        {
-            "update_id":975830317
-            ,"message":{
-                "message_id":11
-                ,"from":{
-                    "id":584216360
-                    ,"is_bot":false
-                    ,"first_name":"I"
-                    ,"language_code":"ru"
-                }
-                ,"chat":{
-                    "id":584216360
-                    ,"first_name":"I"
-                    ,"type":"private"
-                }
-                ,"date":1733672804
-                ,"text":"Test"
-            }
-        }
-    ]
-}
-
-*/
