@@ -16,6 +16,8 @@ class HttpsClient
         void Cleanup();
 
         esp_err_t SetUrl (const char * url);
+        esp_err_t SetHeader (const char *key, const char *value);
+        esp_err_t SetPostData (const char * data, int len);
         esp_err_t SetTimeoutMs (int timeoutMs);
 
         esp_err_t SetMethodGet() { if (!isMethodGet) return SetMethod(HTTP_METHOD_GET); return ESP_OK; }

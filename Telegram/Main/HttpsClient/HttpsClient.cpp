@@ -62,6 +62,40 @@ esp_err_t HttpsClient :: SetUrl (const char * url)
 }
 
 // ----------------------------------------------------------------------------------
+esp_err_t HttpsClient :: SetHeader (const char *key, const char *value)
+{
+    ESP_LOGD (TAG, "Begin SetHeader");
+
+    esp_err_t rc = esp_http_client_set_header (clientHandle, key, value);
+
+    if (rc != ESP_OK)
+    {
+        ESP_LOGE (TAG, "SetHeader error");
+    }
+    
+    ESP_LOGD (TAG, "End SetHeader");
+    
+    return rc;
+}
+
+// ----------------------------------------------------------------------------------
+esp_err_t HttpsClient :: SetPostData (const char * data, int len)
+{
+    ESP_LOGD (TAG, "Begin SetPostData");
+
+    esp_err_t rc = esp_http_client_set_post_field (clientHandle, data, len);
+
+    if (rc != ESP_OK)
+    {
+        ESP_LOGE (TAG, "SetPostData error");
+    }
+    
+    ESP_LOGD (TAG, "End SetPostData");
+    
+    return rc;
+}
+
+// ----------------------------------------------------------------------------------
 esp_err_t HttpsClient :: SetTimeoutMs (int timeoutMs)
 {
     ESP_LOGD (TAG, "Begin SetTimeoutMs %d", timeoutMs);

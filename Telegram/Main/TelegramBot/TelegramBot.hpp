@@ -21,6 +21,7 @@ class TelegramBot
             , tgGetMe
             , tgReadOldMessages
             , tgReadMessage
+            , tgSendMessage
             , tgStop
             , tgExit
         };
@@ -28,6 +29,7 @@ class TelegramBot
         TelegramBot :: States Start();
         TelegramBot :: States GetMe();
         TelegramBot :: States Update();
+        TelegramBot :: States Send();
         TelegramBot :: States Stop();
 
         TelegramBot :: States state;

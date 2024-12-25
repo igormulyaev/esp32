@@ -49,6 +49,9 @@ void TelegramBot :: Process()
             case tgReadMessage:
                 state = Update();
                 break;
+            case tgSendMessage:
+                state = Send();
+                break;            
             case tgStop:
                 state = Stop();
                 break;
@@ -147,8 +150,7 @@ TelegramBot :: States TelegramBot :: Update()
         if (uid != 0)
         {
             lastMsgId = uid;
-            rc = state; // Keep the state
-
+            
             ESP_LOGI (TAG
                 , "Got message: uid = %lu, msg_id = %lu, date = %lu, text = \"%s\""
                 , uid
@@ -169,6 +171,7 @@ TelegramBot :: States TelegramBot :: Update()
 
             TgChat const & chat = parser.getChat();
             ESP_LOGI (TAG, "Chat: id = %llu", chat.id);
+            rc = state == tgReadMessage ? tgSendMessage : tgReadOldMessages;
         }
         else
         {
@@ -181,6 +184,35 @@ TelegramBot :: States TelegramBot :: Update()
     return rc;
 }
 
+// -----------------------------------------------------------------------
+TelegramBot :: States TelegramBot :: Send()
+{
+    ESP_LOGI (TAG, "Send");
+    
+    std::string fullUrl = basicUrl;
+    fullUrl += "sendMessage";
+
+    ESP_LOGD (TAG, "Send url = %s", fullUrl.c_str());
+
+    std::string text = "{\"chat_id\":584216360, \"text\":\"Я бот посольского приказа\"}";
+
+    ESP_LOGI (TAG, "Send text = \"%s\"", text.c_str());
+
+    if (client.SetUrl (fullUrl.c_str()) != ESP_OK
+        || client.SetMethodPost() != ESP_OK
+        || client.SetHeader ("Content-Type", "application/json") != ESP_OK
+        || client.SetPostData (text.c_str(), text.length()) != ESP_OK
+        || client.Perform() != ESP_OK) 
+    {
+        ESP_LOGE (TAG, "SetUrl or Perform error");
+        return tgStop;
+    }
+
+    ESP_LOGI (TAG, "Data received: \"%s\"", client.result.c_str());
+
+    ESP_LOGD (TAG, "End Send");
+    return tgReadMessage;
+}
 // -----------------------------------------------------------------------
 TelegramBot :: States TelegramBot :: Stop()
 {
