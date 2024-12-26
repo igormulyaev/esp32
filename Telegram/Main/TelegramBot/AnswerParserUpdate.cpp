@@ -4,7 +4,7 @@
 
 // -----------------------------------------------------------------------
 AnswerParserUpdate :: AnswerParserUpdate (const std::string & s)
-    : AnswerParserBase (s), update_id(0), message_id(0), from(), chat(), date(0)
+    : AnswerParserBase (s)
 {
     if (isOk)
     {
@@ -26,36 +26,7 @@ AnswerParserUpdate :: AnswerParserUpdate (const std::string & s)
                 else if (jREl -> type & cJSON_Object
                     && strcmp (jREl -> string, "message") == 0)
                 {
-                    for (cJSON *jMsg = jREl -> child; 
-                        jMsg != NULL && jMsg -> string != NULL; 
-                        jMsg = jMsg -> next)
-                    {
-                        if (jMsg -> type & cJSON_Number
-                            && strcmp (jMsg -> string, "message_id") == 0)
-                        {
-                            message_id = jMsg -> valueint;
-                        }
-                        else if (jMsg -> type & cJSON_Object
-                            && strcmp (jMsg -> string, "from") == 0)
-                        {
-                            from.populatefromJson(jMsg);
-                        }
-                        else if (jMsg -> type & cJSON_Object
-                            && strcmp (jMsg -> string, "chat") == 0)
-                        {
-                            chat.populatefromJson(jMsg);
-                        }
-                        else if (jMsg -> type & cJSON_Number
-                            && strcmp (jMsg -> string, "date") == 0)
-                        {
-                            date = jMsg -> valueint;
-                        }
-                        else if (jMsg -> type & cJSON_String
-                            && strcmp (jMsg -> string, "text") == 0)
-                        {
-                            text = jMsg -> valuestring;
-                        }
-                    }
+                    message.populatefromJson (jREl);
                 }
             }
             

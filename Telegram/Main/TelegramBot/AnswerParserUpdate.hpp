@@ -11,19 +11,11 @@ class AnswerParserUpdate : public AnswerParserBase
         virtual ~AnswerParserUpdate() {};
 
         uint32_t getUpdateId() const { return update_id; }
-        uint32_t getMessageId() const { return message_id; }
-        TgUser const & getFrom() const { return from; }
-        TgChat const & getChat() const { return chat; }
-        uint32_t getDate() const { return date; }
-        std::string const & getText() const { return text; }
+        TgMessage const & getMessage() const { return message; }
 
     private:
-        uint32_t update_id;
-        uint32_t message_id;
-        TgUser from;
-        TgChat chat;
-        uint32_t date;
-        std::string text;
+        uint32_t update_id = 0;
+        TgMessage message;
 };
 
 #endif // ANSWERPARSERUPDATE_HPP

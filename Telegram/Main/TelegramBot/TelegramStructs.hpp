@@ -8,27 +8,31 @@ struct cJSON;
 
 struct TgUser
 {
-    uint64_t id;
-    bool is_bot;
+    uint64_t id = 0;
+    bool is_bot = false;
     std::string first_name;
     std::string last_name;
     std::string username;
     std::string language_code;
 
-    TgUser(): id(0), is_bot(false)
-    {}
-
-    bool populatefromJson (cJSON *jUser);
+    bool populatefromJson (cJSON * jUser);
 };
 
 struct TgChat
 {
-    uint64_t id;
+    uint64_t id = 0;
 
-    TgChat(): id(0)
-    {}
-    bool populatefromJson (cJSON *jChat);
+    bool populatefromJson (cJSON * jChat);
 };
 
+struct TgMessage
+{
+    uint64_t message_id = 0;
+    TgUser from;
+    TgChat chat;
+    uint64_t date = 0;
+    std::string text;
 
+    bool populatefromJson (cJSON * jMessage);
+};
 #endif // TELEGRAMSTRUCTS_HPP

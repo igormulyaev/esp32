@@ -34,13 +34,18 @@ class TelegramBot
 
         TelegramBot :: States state;
 
+        esp_err_t PerformGet (const std::string & url);
+        esp_err_t PerformPost (const std::string & url, const std::string & data, const char * contentType = "application/json");
+
         // bot params
-        std :: string Firstname;
-        std :: string Username;
+        std::string Firstname;
+        std::string Username;
+
+        // message received
 
         // bot workdata
         HttpsClient client;
-        std :: string basicUrl;
+        std::string basicUrl;
         uint32_t lastMsgId;
         
         static const char * const TAG;

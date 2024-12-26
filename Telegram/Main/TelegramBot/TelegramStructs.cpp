@@ -4,7 +4,7 @@
 //#include <cstdlib>
 
 
-bool TgUser :: populatefromJson(cJSON *jUser)
+bool TgUser :: populatefromJson(cJSON * jUser)
 {
     bool rc = false;
 
@@ -44,7 +44,7 @@ bool TgUser :: populatefromJson(cJSON *jUser)
 }
 
 
-bool TgChat ::  populatefromJson (cJSON *jChat)
+bool TgChat ::  populatefromJson (cJSON * jChat)
 {
     bool rc = false;
 
@@ -57,6 +57,45 @@ bool TgChat ::  populatefromJson (cJSON *jChat)
         {
             id = jEl -> valuedouble;
             rc = true;
+        }
+    }
+
+    return rc;
+}
+
+bool TgMessage :: populatefromJson (cJSON * jMessage)
+{
+    bool rc = false;
+
+    for (cJSON * jEl = jMessage -> child; 
+        jEl != NULL && jEl -> string != NULL; 
+        jEl = jEl -> next)
+    {
+        if (jEl -> type & cJSON_Number
+            && strcmp(jEl -> string, "message_id") == 0)
+        {
+            message_id = jEl -> valuedouble;
+            rc = true;
+        }
+        else if (jEl -> type & cJSON_Number
+            && strcmp(jEl -> string, "date") == 0)
+        {
+            date = jEl -> valuedouble;
+        }
+        else if (jEl -> type & cJSON_String
+            && strcmp(jEl -> string, "text") == 0)
+        {
+            text = jEl -> valuestring;
+        }
+        else if (jEl -> type & cJSON_Object
+            && strcmp(jEl -> string, "from") == 0)
+        {
+            rc = from.populatefromJson(jEl);
+        }
+        else if (jEl -> type & cJSON_Object
+            && strcmp(jEl -> string, "chat") == 0)
+        {
+            rc = chat.populatefromJson(jEl);
         }
     }
 

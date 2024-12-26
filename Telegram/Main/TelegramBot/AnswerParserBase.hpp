@@ -13,8 +13,8 @@ class AnswerParserBase
 
     protected:
         CjsonHandler json;
-        bool isOk;
-        const cJSON * result;
+        bool isOk = false;
+        const cJSON * result = NULL;
 };
 
 #endif // ANSWERPARSERBASE_HPP

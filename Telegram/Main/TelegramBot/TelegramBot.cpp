@@ -84,11 +84,8 @@ TelegramBot :: States TelegramBot :: GetMe()
 
     ESP_LOGD (TAG, "GetMe url = %s", fullUrl.c_str());
 
-    if (client.SetUrl (fullUrl.c_str()) != ESP_OK 
-        || client.SetMethodGet() != ESP_OK
-        || client.Perform() != ESP_OK) 
+    if (PerformGet (fullUrl) != ESP_OK)
     {
-        ESP_LOGE (TAG, "SetUrl or Perform error");
         return tgStop;
     }
 
@@ -128,11 +125,8 @@ TelegramBot :: States TelegramBot :: Update()
 
     ESP_LOGD (TAG, "Update url = %s", fullUrl.c_str());
 
-    if (client.SetUrl (fullUrl.c_str()) != ESP_OK
-        || client.SetMethodGet() != ESP_OK
-        || client.Perform() != ESP_OK) 
+    if (PerformGet (fullUrl) != ESP_OK)
     {
-        ESP_LOGE (TAG, "SetUrl or Perform error");
         return tgStop;
     }
 
@@ -151,26 +145,26 @@ TelegramBot :: States TelegramBot :: Update()
         {
             lastMsgId = uid;
             
+            TgMessage const & message = parser.getMessage();
+
             ESP_LOGI (TAG
-                , "Got message: uid = %lu, msg_id = %lu, date = %lu, text = \"%s\""
+                , "Got message: uid = %lu, msg_id = %llu, date = %llu, text = \"%s\""
                 , uid
-                , parser.getMessageId()
-                , parser.getDate()
-                , parser.getText().c_str()
+                , message.message_id
+                , message.date
+                , message.text.c_str()
             );
 
-            TgUser const & from = parser.getFrom();
             ESP_LOGI (TAG
                 , "From: id = %llu, first_name = \"%s\", last_name = \"%s\", username = \"%s\", language_code = \"%s\""
-                , from.id
-                , from.first_name.c_str()
-                , from.last_name.c_str()
-                , from.username.c_str()
-                , from.language_code.c_str()
+                , message.from.id
+                , message.from.first_name.c_str()
+                , message.from.last_name.c_str()
+                , message.from.username.c_str()
+                , message.from.language_code.c_str()
             );
 
-            TgChat const & chat = parser.getChat();
-            ESP_LOGI (TAG, "Chat: id = %llu", chat.id);
+            ESP_LOGI (TAG, "Chat: id = %llu", message.chat.id);
             rc = state == tgReadMessage ? tgSendMessage : tgReadOldMessages;
         }
         else
@@ -198,13 +192,8 @@ TelegramBot :: States TelegramBot :: Send()
 
     ESP_LOGI (TAG, "Send text = \"%s\"", text.c_str());
 
-    if (client.SetUrl (fullUrl.c_str()) != ESP_OK
-        || client.SetMethodPost() != ESP_OK
-        || client.SetHeader ("Content-Type", "application/json") != ESP_OK
-        || client.SetPostData (text.c_str(), text.length()) != ESP_OK
-        || client.Perform() != ESP_OK) 
+    if (PerformPost (fullUrl, text) != ESP_OK)
     {
-        ESP_LOGE (TAG, "SetUrl or Perform error");
         return tgStop;
     }
 
@@ -213,6 +202,7 @@ TelegramBot :: States TelegramBot :: Send()
     ESP_LOGD (TAG, "End Send");
     return tgReadMessage;
 }
+
 // -----------------------------------------------------------------------
 TelegramBot :: States TelegramBot :: Stop()
 {
@@ -223,6 +213,36 @@ TelegramBot :: States TelegramBot :: Stop()
     ESP_LOGD (TAG, "End Stop");
     
     return tgExit;
+}
+
+// -----------------------------------------------------------------------
+esp_err_t TelegramBot :: PerformGet (const std::string & url)
+{
+    if (client.SetUrl (url.c_str()) != ESP_OK
+        || client.SetMethodGet() != ESP_OK
+        || client.Perform() != ESP_OK) 
+    {
+        ESP_LOGE (TAG, "PerformGet error");
+        return ESP_FAIL;
+    }
+    
+    return ESP_OK;
+}
+
+// -----------------------------------------------------------------------
+esp_err_t TelegramBot :: PerformPost (const std::string & url, const std::string & data, const char * contentType)
+{
+    if (client.SetUrl (url.c_str()) != ESP_OK
+        || client.SetMethodPost() != ESP_OK
+        || client.SetHeader ("Content-Type", contentType) != ESP_OK
+        || client.SetPostData (data.c_str(), data.length()) != ESP_OK
+        || client.Perform() != ESP_OK) 
+    {
+        ESP_LOGE (TAG, "PerformPost error");
+        return ESP_FAIL;
+    }
+    
+    return ESP_OK;
 }
 
 // -----------------------------------------------------------------------
