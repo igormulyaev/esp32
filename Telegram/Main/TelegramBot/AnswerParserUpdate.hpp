@@ -7,7 +7,7 @@
 class AnswerParserUpdate : public AnswerParserBase
 {
     public:
-        AnswerParserUpdate(const std :: string & s);
+        AnswerParserUpdate(const std::string & s);
         virtual ~AnswerParserUpdate() {};
 
         uint32_t getUpdateId() const { return update_id; }

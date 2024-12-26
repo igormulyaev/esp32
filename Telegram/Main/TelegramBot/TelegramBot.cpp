@@ -4,6 +4,7 @@
 #include "TelegramBot.hpp"
 #include "StaticObjects.hpp"
 #include "AnswerParserGetMe.hpp"
+#include "AnswerParserSend.hpp"
 #include "AnswerParserUpdate.hpp"
 
 #include "esp_err.h"
@@ -49,6 +50,9 @@ void TelegramBot :: Process()
             case tgReadMessage:
                 state = Update();
                 break;
+            case tgAnswer:
+                state = Answer();
+                break;
             case tgSendMessage:
                 state = Send();
                 break;            
@@ -81,8 +85,6 @@ TelegramBot :: States TelegramBot :: GetMe()
 
     std::string fullUrl = basicUrl;
     fullUrl.append ("getMe");
-
-    ESP_LOGD (TAG, "GetMe url = %s", fullUrl.c_str());
 
     if (PerformGet (fullUrl) != ESP_OK)
     {
@@ -123,8 +125,6 @@ TelegramBot :: States TelegramBot :: Update()
         fullUrl += "&timeout=60";
     }
 
-    ESP_LOGD (TAG, "Update url = %s", fullUrl.c_str());
-
     if (PerformGet (fullUrl) != ESP_OK)
     {
         return tgStop;
@@ -145,7 +145,8 @@ TelegramBot :: States TelegramBot :: Update()
         {
             lastMsgId = uid;
             
-            TgMessage const & message = parser.getMessage();
+            message = parser.getMessage();
+            rc = state == tgReadMessage ? tgAnswer : tgReadOldMessages;
 
             ESP_LOGI (TAG
                 , "Got message: uid = %lu, msg_id = %llu, date = %llu, text = \"%s\""
@@ -165,7 +166,6 @@ TelegramBot :: States TelegramBot :: Update()
             );
 
             ESP_LOGI (TAG, "Chat: id = %llu", message.chat.id);
-            rc = state == tgReadMessage ? tgSendMessage : tgReadOldMessages;
         }
         else
         {
@@ -177,6 +177,19 @@ TelegramBot :: States TelegramBot :: Update()
     ESP_LOGD (TAG, "End Update");
     return rc;
 }
+// -----------------------------------------------------------------------
+TelegramBot :: States TelegramBot :: Answer()
+{
+    ESP_LOGI (TAG, "Answer");
+
+    answerText = "Привет, ";
+    answerText += message.from.first_name;
+    answerText += "!\n";
+    answerText += "Я бот посольского приказа.";
+
+    ESP_LOGD (TAG, "End Answer");
+    return tgSendMessage;
+}
 
 // -----------------------------------------------------------------------
 TelegramBot :: States TelegramBot :: Send()
@@ -186,21 +199,26 @@ TelegramBot :: States TelegramBot :: Send()
     std::string fullUrl = basicUrl;
     fullUrl += "sendMessage";
 
-    ESP_LOGD (TAG, "Send url = %s", fullUrl.c_str());
+    std::string jReply = "{\"chat_id\":";
+    jReply += std::to_string (message.chat.id);
+    jReply += ",\"text\":\"";
+    jReply += answerText;
+    jReply += "\"}";
 
-    std::string text = "{\"chat_id\":584216360, \"text\":\"Я бот посольского приказа\"}";
+    ESP_LOGI (TAG, "Send text = \"%s\"", jReply.c_str());
 
-    ESP_LOGI (TAG, "Send text = \"%s\"", text.c_str());
-
-    if (PerformPost (fullUrl, text) != ESP_OK)
+    if (PerformPost (fullUrl, jReply) != ESP_OK)
     {
         return tgStop;
     }
 
     ESP_LOGI (TAG, "Data received: \"%s\"", client.result.c_str());
 
+    AnswerParserSend parser(client.result);
+
     ESP_LOGD (TAG, "End Send");
-    return tgReadMessage;
+
+    return parser.getIsOk() ? tgReadMessage : tgStop;
 }
 
 // -----------------------------------------------------------------------
@@ -218,6 +236,8 @@ TelegramBot :: States TelegramBot :: Stop()
 // -----------------------------------------------------------------------
 esp_err_t TelegramBot :: PerformGet (const std::string & url)
 {
+    ESP_LOGD (TAG, "Update url = %s", url.c_str());
+
     if (client.SetUrl (url.c_str()) != ESP_OK
         || client.SetMethodGet() != ESP_OK
         || client.Perform() != ESP_OK) 

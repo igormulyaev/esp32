@@ -12,6 +12,7 @@ idf_component_register (
         "TelegramBot/CjsonHandler.cpp"
         "TelegramBot/AnswerParserBase.cpp"
         "TelegramBot/AnswerParserGetMe.cpp"
+        "TelegramBot/AnswerParserSend.cpp"
         "TelegramBot/AnswerParserUpdate.cpp"
         "TelegramBot/TelegramStructs.cpp"
         "secret_data.cpp"

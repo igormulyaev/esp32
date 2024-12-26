@@ -3,6 +3,7 @@
 
 #include <string>
 #include "HttpsClient/HttpsClient.hpp"
+#include "TelegramStructs.hpp"
 
 class TelegramBot 
 {
@@ -21,6 +22,7 @@ class TelegramBot
             , tgGetMe
             , tgReadOldMessages
             , tgReadMessage
+            , tgAnswer
             , tgSendMessage
             , tgStop
             , tgExit
@@ -29,6 +31,7 @@ class TelegramBot
         TelegramBot :: States Start();
         TelegramBot :: States GetMe();
         TelegramBot :: States Update();
+        TelegramBot :: States Answer();
         TelegramBot :: States Send();
         TelegramBot :: States Stop();
 
@@ -42,6 +45,8 @@ class TelegramBot
         std::string Username;
 
         // message received
+        TgMessage message;
+        std::string answerText;
 
         // bot workdata
         HttpsClient client;
