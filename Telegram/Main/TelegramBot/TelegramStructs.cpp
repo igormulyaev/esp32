@@ -36,7 +36,8 @@ bool TgUser :: populatefromJson(cJSON * jUser)
         else if (jEl -> type & cJSON_String
             && strcmp(jEl -> string, "language_code") == 0)
         {
-            language_code = jEl -> valuestring;
+            strncpy (language_code, jEl -> valuestring, 2);
+            language_code[2] = 0;
         }
     }
 

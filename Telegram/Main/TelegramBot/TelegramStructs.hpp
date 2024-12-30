@@ -13,7 +13,7 @@ struct TgUser
     std::string first_name;
     std::string last_name;
     std::string username;
-    std::string language_code;
+    char language_code[3] = {0};
 
     bool populatefromJson (cJSON * jUser);
 };

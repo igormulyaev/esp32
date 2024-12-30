@@ -162,7 +162,7 @@ TelegramBot :: States TelegramBot :: Update()
                 , message.from.first_name.c_str()
                 , message.from.last_name.c_str()
                 , message.from.username.c_str()
-                , message.from.language_code.c_str()
+                , message.from.language_code
             );
 
             ESP_LOGI (TAG, "Chat: id = %llu", message.chat.id);
@@ -185,7 +185,7 @@ TelegramBot :: States TelegramBot :: Answer()
     answerText = "Привет, ";
     answerText += message.from.first_name;
     answerText += "!\n";
-    answerText += "Я бот посольского приказа.";
+    answerText += "Commands: /start, /help, /test";
 
     ESP_LOGD (TAG, "End Answer");
     return tgSendMessage;
