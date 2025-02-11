@@ -20,8 +20,9 @@ class TelegramBot
         {
             tgStart = 0
             , tgGetMe
-            , tgReadOldMessages
+            , tgReadOldMessage
             , tgReadMessage
+            , tgStoreOldMessage
             , tgAnswer
             , tgSendMessage
             , tgStop
@@ -31,6 +32,7 @@ class TelegramBot
         TelegramBot :: States Start();
         TelegramBot :: States GetMe();
         TelegramBot :: States Update();
+        TelegramBot :: States StoreOldMessage();
         TelegramBot :: States Answer();
         TelegramBot :: States Send();
         TelegramBot :: States Stop();

@@ -46,9 +46,12 @@ void TelegramBot :: Process()
             case tgGetMe:
                 state = GetMe();
                 break;
-            case tgReadOldMessages:
+            case tgReadOldMessage:
             case tgReadMessage:
                 state = Update();
+                break;
+            case tgStoreOldMessage:
+                state = StoreOldMessage();
                 break;
             case tgAnswer:
                 state = Answer();
@@ -105,7 +108,7 @@ TelegramBot :: States TelegramBot :: GetMe()
     }
     ESP_LOGD (TAG, "End GetMe");
 
-    return isOk ? tgReadOldMessages : tgStop;
+    return isOk ? tgReadOldMessage : tgStop;
 }
 
 // -----------------------------------------------------------------------
@@ -132,7 +135,7 @@ TelegramBot :: States TelegramBot :: Update()
 
     ESP_LOGD (TAG, "Data received: \"%s\"", client.result.c_str());
 
-    AnswerParserUpdate parser(client.result);
+    AnswerParserUpdate parser(client.result, message);
 
     TelegramBot :: States rc = tgStop;
     if (parser.getIsOk())
@@ -145,8 +148,7 @@ TelegramBot :: States TelegramBot :: Update()
         {
             lastMsgId = uid;
             
-            message = parser.getMessage();
-            rc = state == tgReadMessage ? tgAnswer : tgReadOldMessages;
+            rc = state == tgReadMessage ? tgAnswer : tgStoreOldMessage;
 
             ESP_LOGI (TAG
                 , "Got message: uid = %lu, msg_id = %llu, date = %llu, text = \"%s\""
@@ -177,6 +179,15 @@ TelegramBot :: States TelegramBot :: Update()
     ESP_LOGD (TAG, "End Update");
     return rc;
 }
+// -----------------------------------------------------------------------
+TelegramBot :: States TelegramBot :: StoreOldMessage()
+{
+    ESP_LOGI (TAG, "StoreOldMessage");
+
+    ESP_LOGD (TAG, "End StoreOldMessage");
+    return tgReadOldMessage;
+}
+
 // -----------------------------------------------------------------------
 TelegramBot :: States TelegramBot :: Answer()
 {

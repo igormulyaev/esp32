@@ -3,12 +3,14 @@
 #include <cstring>
 
 // -----------------------------------------------------------------------
-AnswerParserUpdate :: AnswerParserUpdate (const std::string & s)
+AnswerParserUpdate :: AnswerParserUpdate (const std::string & s, TgMessage &msg)
     : AnswerParserBase (s)
 {
     if (isOk)
     {
         // Process the message (it should be only one)
+        msg.clear();
+        
         cJSON * jResults = result -> child;
 
         if (jResults != NULL)
@@ -26,7 +28,7 @@ AnswerParserUpdate :: AnswerParserUpdate (const std::string & s)
                 else if (jREl -> type & cJSON_Object
                     && strcmp (jREl -> string, "message") == 0)
                 {
-                    message.populatefromJson (jREl);
+                    msg.populatefromJson (jREl);
                 }
             }
             

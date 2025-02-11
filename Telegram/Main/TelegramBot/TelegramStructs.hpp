@@ -16,6 +16,7 @@ struct TgUser
     char language_code[3] = {0};
 
     bool populatefromJson (cJSON * jUser);
+    void clear() { id = 0; is_bot = false; first_name.clear(); last_name.clear(); username.clear(); language_code[0] = 0; }
 };
 
 struct TgChat
@@ -23,6 +24,7 @@ struct TgChat
     uint64_t id = 0;
 
     bool populatefromJson (cJSON * jChat);
+    void clear() { id = 0; }
 };
 
 struct TgMessage
@@ -34,5 +36,6 @@ struct TgMessage
     std::string text;
 
     bool populatefromJson (cJSON * jMessage);
+    void clear() { message_id = 0; from.clear(); chat.clear(); date = 0; text.clear(); }
 };
 #endif // TELEGRAMSTRUCTS_HPP
