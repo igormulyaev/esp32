@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <array>
 
 struct cJSON;
 
@@ -37,5 +38,24 @@ struct TgMessage
 
     bool populatefromJson (cJSON * jMessage);
     void clear() { message_id = 0; from.clear(); chat.clear(); date = 0; text.clear(); }
+};
+
+struct TgOldMessageInfo
+{
+    TgChat chat;
+    std::string replyName;
+};
+
+struct TgOldMessages
+{
+    static constexpr size_t maxUsers = 16;
+    size_t count = 0;
+    std::array <TgOldMessageInfo, maxUsers> messages;
+};
+
+struct TgAnswer
+{
+    TgChat chat;
+    std::string text;
 };
 #endif // TELEGRAMSTRUCTS_HPP

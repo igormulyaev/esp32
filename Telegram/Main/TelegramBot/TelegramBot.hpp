@@ -2,6 +2,7 @@
 #define TELEGRAMBOT_HPP
 
 #include <string>
+#include <memory>
 #include "HttpsClient/HttpsClient.hpp"
 #include "TelegramStructs.hpp"
 
@@ -23,7 +24,8 @@ class TelegramBot
             , tgReadOldMessage
             , tgReadMessage
             , tgStoreOldMessage
-            , tgAnswer
+            , tgAnswerNewMessage
+            , tgAnswerOldMessages
             , tgSendMessage
             , tgStop
             , tgExit
@@ -33,7 +35,8 @@ class TelegramBot
         TelegramBot :: States GetMe();
         TelegramBot :: States Update();
         TelegramBot :: States StoreOldMessage();
-        TelegramBot :: States Answer();
+        TelegramBot :: States AnswerNewMessage();
+        TelegramBot :: States AnswerOldMessages();
         TelegramBot :: States Send();
         TelegramBot :: States Stop();
 
@@ -48,7 +51,10 @@ class TelegramBot
 
         // message received
         TgMessage message;
-        std::string answerText;
+        
+        TgAnswer answer;
+
+        std::unique_ptr <TgOldMessages> oldMessages;
 
         // bot workdata
         HttpsClient client;

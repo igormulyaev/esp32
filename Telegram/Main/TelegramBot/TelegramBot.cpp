@@ -53,8 +53,11 @@ void TelegramBot :: Process()
             case tgStoreOldMessage:
                 state = StoreOldMessage();
                 break;
-            case tgAnswer:
-                state = Answer();
+            case tgAnswerNewMessage:
+                state = AnswerNewMessage();
+                break;
+            case tgAnswerOldMessages:
+                state = AnswerOldMessages();
                 break;
             case tgSendMessage:
                 state = Send();
@@ -148,7 +151,7 @@ TelegramBot :: States TelegramBot :: Update()
         {
             lastMsgId = uid;
             
-            rc = state == tgReadMessage ? tgAnswer : tgStoreOldMessage;
+            rc = state == tgReadMessage ? tgAnswerNewMessage : tgStoreOldMessage;
 
             ESP_LOGI (TAG
                 , "Got message: uid = %lu, msg_id = %llu, date = %llu, text = \"%s\""
@@ -172,7 +175,7 @@ TelegramBot :: States TelegramBot :: Update()
         else
         {
             ESP_LOGI (TAG, "No messages");
-            rc = tgReadMessage;
+            rc = oldMessages != nullptr  ? tgAnswerOldMessages : tgReadMessage;
         }
     }
     
@@ -184,22 +187,75 @@ TelegramBot :: States TelegramBot :: StoreOldMessage()
 {
     ESP_LOGI (TAG, "StoreOldMessage");
 
+    if (oldMessages == nullptr)
+    {
+        oldMessages = std::make_unique <TgOldMessages>();
+    }
+
+    size_t cnt = oldMessages -> count;
+    if (cnt < TgOldMessages::maxUsers)
+    {
+        // Try to find the chat in the list, add the chat if it's not found
+        size_t i = 0;
+        for (; i < cnt; i++)
+        {
+            if (oldMessages -> messages[i].chat.id == message.chat.id)
+            {
+                break;
+            }
+        }
+        if (i == cnt)
+        {
+            // The chat haven't been stored yet
+            oldMessages -> messages[cnt].chat = message.chat;
+            oldMessages -> messages[cnt].replyName = message.from.first_name.empty() ? message.from.username : message.from.first_name;
+            oldMessages -> count = cnt + 1;
+        }
+    }
     ESP_LOGD (TAG, "End StoreOldMessage");
     return tgReadOldMessage;
 }
 
 // -----------------------------------------------------------------------
-TelegramBot :: States TelegramBot :: Answer()
+TelegramBot :: States TelegramBot :: AnswerNewMessage()
 {
-    ESP_LOGI (TAG, "Answer");
+    ESP_LOGI (TAG, "AnswerNewMessage");
 
-    answerText = "Привет, ";
-    answerText += message.from.first_name;
-    answerText += "!\n";
-    answerText += "Commands: /start, /help, /test";
+    answer.text = "Привет, ";
+    answer.text += message.from.first_name;
+    answer.text += "!\n";
+    answer.text += "Commands: /start, /help, /test";
+    answer.chat = message.chat;
 
-    ESP_LOGD (TAG, "End Answer");
+    ESP_LOGD (TAG, "End AnswerNewMessage");
     return tgSendMessage;
+}
+
+// -----------------------------------------------------------------------
+TelegramBot :: States TelegramBot :: AnswerOldMessages()
+{
+    ESP_LOGI (TAG, "AnswerOldMessages");
+
+    TelegramBot :: States rc = tgSendMessage;
+
+    size_t cnt = oldMessages -> count;
+    if (cnt > 0)
+    {
+        answer.text = "Привет, ";
+        answer.text += oldMessages -> messages[cnt - 1].replyName;
+        answer.text += "!\n";
+        answer.text += "Я снова здесь!\n";
+        answer.chat = oldMessages -> messages[cnt - 1].chat;
+        oldMessages -> count = cnt - 1;
+    }
+    else
+    {
+        oldMessages.reset();
+        rc = tgReadMessage;
+    }
+
+    ESP_LOGD (TAG, "End AnswerOldMessages");
+    return rc;
 }
 
 // -----------------------------------------------------------------------
@@ -211,9 +267,9 @@ TelegramBot :: States TelegramBot :: Send()
     fullUrl += "sendMessage";
 
     std::string jReply = "{\"chat_id\":";
-    jReply += std::to_string (message.chat.id);
+    jReply += std::to_string (answer.chat.id);
     jReply += ",\"text\":\"";
-    jReply += answerText;
+    jReply += answer.text;
     jReply += "\"}";
 
     ESP_LOGI (TAG, "Send text = \"%s\"", jReply.c_str());
@@ -229,7 +285,7 @@ TelegramBot :: States TelegramBot :: Send()
 
     ESP_LOGD (TAG, "End Send");
 
-    return parser.getIsOk() ? tgReadMessage : tgStop;
+    return parser.getIsOk() ? (oldMessages != nullptr ? tgAnswerOldMessages : tgReadMessage) : tgStop;
 }
 
 // -----------------------------------------------------------------------
