@@ -3,9 +3,11 @@
 
 class NVS;
 class WiFiStation;
+class TelegramTask;
 
 extern NVS nvs;
 extern WiFiStation sta;
+extern TelegramTask tgTask;
 
 extern const char cert_pem_start[] asm("_binary_telegram_org_pem_start");
 

@@ -1,6 +1,7 @@
 idf_component_register (
     SRCS 
         "main.cpp"
+        "TelegramTask.cpp"
         "StaticObjects.cpp"
         "WiFiStation/WiFiStation.cpp"
         "WiFiStation/NVS.cpp"
@@ -16,6 +17,7 @@ idf_component_register (
         "TelegramBot/AnswerParserUpdate.cpp"
         "TelegramBot/TelegramStructs.cpp"
         "secret_data.cpp"
+        "System/Task.cpp"
     INCLUDE_DIRS "."
     EMBED_TXTFILES telegram.org.pem
     REQUIRES
