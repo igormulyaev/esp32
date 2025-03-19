@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_log.h"
 
 #include "StaticObjects.hpp"
 #include "TelegramTask.hpp"
-
-#include "esp_log.h"
+#include "System/NVS.hpp"
+#include "Console/Console.hpp"
 
 static const char * const TAG = "main";
 
@@ -46,6 +47,11 @@ void TestSimpleHttpServer ()
 extern "C" void app_main(void)
 {
     ESP_LOGI (TAG, "Begin app_main");
-    tgTask.createTask("TelegramTask");
+
+    nvs.Init();
+
+    //tgTask.createTask("TelegramTask");
+    console.Run();
+ 
     ESP_LOGI (TAG, "End app_main");
 }

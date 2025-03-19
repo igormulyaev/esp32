@@ -1,7 +1,6 @@
 #include "TelegramTask.hpp"
 #include "TelegramBot/TelegramBot.hpp"
 #include "WiFiStation/WiFiStation.hpp"
-#include "WiFiStation/NVS.hpp"
 #include "StaticObjects.hpp"
 
 #include "esp_log.h"
@@ -10,8 +9,6 @@
 void TelegramTask :: execute()
 {
     ESP_LOGI (TAG, "Begin execute");
-
-    nvs.Init();
 
     sta.Init();
 

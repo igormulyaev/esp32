@@ -4,10 +4,12 @@
 class NVS;
 class WiFiStation;
 class TelegramTask;
+class Console;
 
 extern NVS nvs;
 extern WiFiStation sta;
 extern TelegramTask tgTask;
+extern Console console;
 
 extern const char cert_pem_start[] asm("_binary_telegram_org_pem_start");
 
