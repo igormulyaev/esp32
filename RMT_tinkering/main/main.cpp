@@ -1,33 +1,59 @@
 #include "esp_log.h"
 #include "esp_check.h"
+
 #include "driver/rmt_tx.h"
 #include "driver/rmt_rx.h"
 #include "driver/gpio.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+
+
 #define RMT_GPIO GPIO_NUM_5
-#define LOG_GPIO GPIO_NUM_18
+#define MAIN_LOG_GPIO GPIO_NUM_18
+#define RMT_LOG_GPIO GPIO_NUM_19
 
 const char * const tag = "main";
 
-#define LOG_GPIO_CHANGE  { log_state = !log_state; gpio_set_level (LOG_GPIO, log_state); }
+bool write_log_state = false;
+bool read_log_state = false;
+#define MAIN_LOG_GPIO_CHANGE { write_log_state = !write_log_state; gpio_set_level (MAIN_LOG_GPIO, write_log_state); }
+#define RMT_LOG_GPIO_CHANGE { read_log_state = !read_log_state; gpio_set_level (RMT_LOG_GPIO, read_log_state); }
 
-esp_err_t tryRmt()
+rmt_symbol_word_t rx_symbols_buf [64 * 8];
+
+IRAM_ATTR
+bool rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx_done_event_data_t *edata, void *user_data)
 {
-    // --------------------------------------------------------------------------
-    // Set up LOG_GPIO
-    
-    bool log_state = false;
+    RMT_LOG_GPIO_CHANGE;
 
+    QueueHandle_t receive_queue = static_cast<QueueHandle_t> (user_data);
+    BaseType_t task_woken = pdFALSE;
+    xQueueSendFromISR (receive_queue, edata, &task_woken);
+
+    return task_woken;
+}
+
+esp_err_t setupLogGpio (gpio_num_t gpio_num)
+{
     gpio_config_t log_io_conf = {
-        .pin_bit_mask = (1ULL << LOG_GPIO), 
+        .pin_bit_mask = (1ULL << gpio_num), 
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE,
     };
 
-    ESP_RETURN_ON_ERROR (gpio_config (&log_io_conf), tag, "gpio_config failed");
+    return gpio_config (&log_io_conf);
+}
 
+esp_err_t tryRmt()
+{
+    // --------------------------------------------------------------------------
+    // Setup log gpios
+    ESP_RETURN_ON_ERROR (setupLogGpio (MAIN_LOG_GPIO), tag, "Setup main log gpio failed");
+    ESP_RETURN_ON_ERROR (setupLogGpio (RMT_LOG_GPIO), tag, "Setup RMT log gpio failed");
+    
     // --------------------------------------------------------------------------
     // Set up copy encoder
     
@@ -35,8 +61,6 @@ esp_err_t tryRmt()
     rmt_copy_encoder_config_t cec;
 
     ESP_RETURN_ON_ERROR (rmt_new_copy_encoder (&cec, &copy_encoder), tag, "create copy encoder failed");
-
-    LOG_GPIO_CHANGE;
 
     // --------------------------------------------------------------------------
     // Set up RX channel
@@ -57,8 +81,6 @@ esp_err_t tryRmt()
     rmt_channel_handle_t rx_chan = nullptr;
 
     ESP_RETURN_ON_ERROR (rmt_new_rx_channel (&rx_chan_config, &rx_chan), tag, "create rx channel failed");
-
-    LOG_GPIO_CHANGE;
 
     // --------------------------------------------------------------------------
     // Set up TX channel
@@ -83,24 +105,34 @@ esp_err_t tryRmt()
 
     ESP_RETURN_ON_ERROR (rmt_new_tx_channel (&tx_chan_config, &tx_chan), tag, "create tx channel failed");
 
-    LOG_GPIO_CHANGE;
-
     // --------------------------------------------------------------------------
     // Enable pullup on GPIO
 
     ESP_RETURN_ON_ERROR (gpio_set_pull_mode (RMT_GPIO, GPIO_PULLUP_ONLY), tag, "set pull mode failed");
 
-    LOG_GPIO_CHANGE;
+    // --------------------------------------------------------------------------
+    // Create receive queue
+    QueueHandle_t receive_queue = xQueueCreate(1, sizeof(rmt_rx_done_event_data_t));
+
+    //ESP_RETURN_ON_ERROR (receive_queue = xQueueCreate(1, sizeof(rmt_rx_done_event_data_t)), tag, "receive queue creation failed");
 
     // --------------------------------------------------------------------------
-    // Enable TX channel
+    // Register rmt rx done callback
+    rmt_rx_event_callbacks_t rx_callback_cfg = {
+        .on_recv_done = rmt_rx_done_callback
+    };
 
+    rmt_rx_register_event_callbacks(rx_chan, &rx_callback_cfg, receive_queue);
+    //ESP_RETURN_ON_ERROR (rmt_rx_register_event_callbacks(rx_chan, &rx_callback_cfg, static_cast<void *> (QueueHandle_t)), tag, "enable rmt rx channel failed");
+
+    // --------------------------------------------------------------------------
+    // Enable TX and RX channels
+
+    ESP_RETURN_ON_ERROR (rmt_enable(rx_chan), tag, "enable rx channel failed");
     ESP_RETURN_ON_ERROR (rmt_enable(tx_chan), tag, "enable tx channel failed");
 
-    LOG_GPIO_CHANGE;
-
     // --------------------------------------------------------------------------
-    // Transmit START (inverted LOW) signal for 1 second
+    // Transmit START (inverted LOW) signal for 1 ms
 
     rmt_symbol_word_t stay_high = {
         .duration0 = 1'000, 
@@ -117,13 +149,50 @@ esp_err_t tryRmt()
         }
     };
     
+    const rmt_receive_config_t rmt_rx_config = {
+        .signal_range_min_ns = 1000,
+        .signal_range_max_ns = 100'000,
+        .flags = {
+            .en_partial_rx = false,
+        },
+    };
+
+    MAIN_LOG_GPIO_CHANGE;
+    
     ESP_RETURN_ON_ERROR (rmt_transmit(tx_chan, copy_encoder, &stay_high, sizeof(stay_high), &transmit_config), tag, "transmit failed");
     
-    LOG_GPIO_CHANGE;
+    MAIN_LOG_GPIO_CHANGE;
+    
+    ESP_RETURN_ON_ERROR (rmt_receive(rx_chan, rx_symbols_buf, sizeof(rx_symbols_buf), &rmt_rx_config), tag, "receive failed");    
+    
+    MAIN_LOG_GPIO_CHANGE;
+    
+    rmt_rx_done_event_data_t rmt_rx_evt_data;
 
+    ESP_RETURN_ON_FALSE (xQueueReceive(receive_queue, &rmt_rx_evt_data, pdMS_TO_TICKS(1000)) == pdPASS, ESP_ERR_TIMEOUT, tag, "data receive timeout");
+    
+    MAIN_LOG_GPIO_CHANGE;
+    
+    ESP_LOGI (tag, "Received %d symbols", rmt_rx_evt_data.num_symbols);
+    
+    for (size_t i = 0; i < rmt_rx_evt_data.num_symbols; ++i) {
+        ESP_LOGI (tag
+            , "%d: %c %d / %c %d"
+            , i
+            , rmt_rx_evt_data.received_symbols[i].level0 ? 'H' : 'L'
+            , rmt_rx_evt_data.received_symbols[i].duration0
+            , rmt_rx_evt_data.received_symbols[i].level1 ? 'H' : 'L'
+            , rmt_rx_evt_data.received_symbols[i].duration1
+        );
+    }
+
+    //vTaskDelay (pdMS_TO_TICKS(1000));
+    
+    
     return ESP_OK;
 }
 
+// ==========================================================================
 extern "C" void app_main(void)
 {
     ESP_LOGI (tag, "Start");
