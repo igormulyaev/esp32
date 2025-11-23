@@ -47,6 +47,64 @@ esp_err_t setupLogGpio (gpio_num_t gpio_num)
     return gpio_config (&log_io_conf);
 }
 
+esp_err_t DHT22Decoder (const rmt_rx_done_event_data_t *rx_data)
+{
+    ESP_RETURN_ON_FALSE (rx_data->num_symbols == 43, ESP_FAIL, tag, "Invalid number of symbols: %d != 43", rx_data->num_symbols);
+
+    ESP_RETURN_ON_FALSE (
+        rx_data->received_symbols[0].level0 == 1 
+        && rx_data->received_symbols[0].duration0 >= 15
+        && rx_data->received_symbols[0].duration0 < 31
+        && rx_data->received_symbols[0].level1 == 0
+        && rx_data->received_symbols[0].duration1 >= 70
+        && rx_data->received_symbols[0].duration1 < 90
+        && rx_data->received_symbols[1].level0 == 1
+        && rx_data->received_symbols[1].duration0 >= 70
+        && rx_data->received_symbols[1].duration0 < 90
+        , ESP_FAIL
+        , tag
+        , "Invalid start signal"
+    );
+
+    uint8_t data_bytes[5] = {0, 0, 0, 0, 0};
+
+    for (size_t i = 2; i < 42; ++i) {
+        ESP_RETURN_ON_FALSE (
+            rx_data->received_symbols[i-1].level1 == 0
+            && rx_data->received_symbols[i-1].duration1 >= 45
+            && rx_data->received_symbols[i-1].duration1 < 75
+            , ESP_FAIL
+            , tag
+            , "Invalid start of bit %d"
+            , i - 2
+        );
+        ESP_RETURN_ON_FALSE (
+            rx_data->received_symbols[i].level1 == 0
+            && rx_data->received_symbols[i].duration1 >= 20
+            && rx_data->received_symbols[i].duration1 < 80
+            , ESP_FAIL
+            , tag
+            , "Invalid data of bit %d"
+            , i - 2
+        );
+        uint8_t bit_value = (rx_data->received_symbols[i].duration0 > 50) ? 1 : 0;
+        data_bytes[(i - 2) / 8] <<= 1;
+        data_bytes[(i - 2) / 8] |= bit_value;
+    }
+    ESP_LOGI (tag, "bytes are %02X %02X %02X %02X %02X", data_bytes[0], data_bytes[1], data_bytes[2], data_bytes[3], data_bytes[4]);
+
+    ESP_RETURN_ON_FALSE (
+        data_bytes[4] == ((data_bytes[0] + data_bytes[1] + data_bytes[2] + data_bytes[3]) & 0xFF)
+        , ESP_FAIL
+        , tag
+        , "Checksum error: %02X != %02X"
+        , data_bytes[4]
+        , (data_bytes[0] + data_bytes[1] + data_bytes[2] + data_bytes[3]) & 0xFF
+    );
+
+    return ESP_OK;
+}
+
 esp_err_t tryRmt()
 {
     // --------------------------------------------------------------------------
@@ -122,14 +180,13 @@ esp_err_t tryRmt()
         .on_recv_done = rmt_rx_done_callback
     };
 
-    rmt_rx_register_event_callbacks(rx_chan, &rx_callback_cfg, receive_queue);
-    //ESP_RETURN_ON_ERROR (rmt_rx_register_event_callbacks(rx_chan, &rx_callback_cfg, static_cast<void *> (QueueHandle_t)), tag, "enable rmt rx channel failed");
-
+    ESP_RETURN_ON_ERROR (rmt_rx_register_event_callbacks (rx_chan, &rx_callback_cfg, receive_queue), tag, "enable rmt rx channel failed");
+    
     // --------------------------------------------------------------------------
     // Enable TX and RX channels
 
-    ESP_RETURN_ON_ERROR (rmt_enable(rx_chan), tag, "enable rx channel failed");
-    ESP_RETURN_ON_ERROR (rmt_enable(tx_chan), tag, "enable tx channel failed");
+    ESP_RETURN_ON_ERROR (rmt_enable (rx_chan), tag, "enable rx channel failed");
+    ESP_RETURN_ON_ERROR (rmt_enable (tx_chan), tag, "enable tx channel failed");
 
     // --------------------------------------------------------------------------
     // Transmit START (inverted LOW) signal for 1 ms
@@ -159,17 +216,17 @@ esp_err_t tryRmt()
 
     MAIN_LOG_GPIO_CHANGE;
     
-    ESP_RETURN_ON_ERROR (rmt_transmit(tx_chan, copy_encoder, &stay_high, sizeof(stay_high), &transmit_config), tag, "transmit failed");
+    ESP_RETURN_ON_ERROR (rmt_transmit (tx_chan, copy_encoder, &stay_high, sizeof(stay_high), &transmit_config), tag, "transmit failed");
     
     MAIN_LOG_GPIO_CHANGE;
     
-    ESP_RETURN_ON_ERROR (rmt_receive(rx_chan, rx_symbols_buf, sizeof(rx_symbols_buf), &rmt_rx_config), tag, "receive failed");    
+    ESP_RETURN_ON_ERROR (rmt_receive (rx_chan, rx_symbols_buf, sizeof(rx_symbols_buf), &rmt_rx_config), tag, "receive failed");    
     
     MAIN_LOG_GPIO_CHANGE;
     
     rmt_rx_done_event_data_t rmt_rx_evt_data;
 
-    ESP_RETURN_ON_FALSE (xQueueReceive(receive_queue, &rmt_rx_evt_data, pdMS_TO_TICKS(1000)) == pdPASS, ESP_ERR_TIMEOUT, tag, "data receive timeout");
+    ESP_RETURN_ON_FALSE (xQueueReceive (receive_queue, &rmt_rx_evt_data, pdMS_TO_TICKS(100)) == pdPASS, ESP_ERR_TIMEOUT, tag, "data receive timeout");
     
     MAIN_LOG_GPIO_CHANGE;
     
@@ -186,10 +243,7 @@ esp_err_t tryRmt()
         );
     }
 
-    //vTaskDelay (pdMS_TO_TICKS(1000));
-    
-    
-    return ESP_OK;
+    return DHT22Decoder (&rmt_rx_evt_data);
 }
 
 // ==========================================================================
