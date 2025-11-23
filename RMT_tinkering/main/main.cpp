@@ -91,16 +91,24 @@ esp_err_t DHT22Decoder (const rmt_rx_done_event_data_t *rx_data)
         data_bytes[(i - 2) / 8] <<= 1;
         data_bytes[(i - 2) / 8] |= bit_value;
     }
-    ESP_LOGI (tag, "bytes are %02X %02X %02X %02X %02X", data_bytes[0], data_bytes[1], data_bytes[2], data_bytes[3], data_bytes[4]);
 
     ESP_RETURN_ON_FALSE (
-        data_bytes[4] == ((data_bytes[0] + data_bytes[1] + data_bytes[2] + data_bytes[3]) & 0xFF)
+       ((data_bytes[0] + data_bytes[1] + data_bytes[2] + data_bytes[3] - data_bytes[4]) & 0xFF) == 0
         , ESP_FAIL
         , tag
-        , "Checksum error: %02X != %02X"
+        , "Checksum error: %02X + %02X + %02X + %02X - %02X = %02X != 0"
+        , data_bytes[0]
+        , data_bytes[1]
+        , data_bytes[2]
+        , data_bytes[3]
         , data_bytes[4]
-        , (data_bytes[0] + data_bytes[1] + data_bytes[2] + data_bytes[3]) & 0xFF
+        , (data_bytes[0] + data_bytes[1] + data_bytes[2] + data_bytes[3] - data_bytes[4]) & 0xFF
     );
+
+    unsigned int humidity = (data_bytes[0] << 8) | data_bytes[1];
+    unsigned int temperature = (((data_bytes[2] & 0x7f) << 8) | data_bytes[3]) * ((data_bytes[2] & 0x80) == 0 ? 1 : -1);
+
+    ESP_LOGI (tag, "Humidity: %d.%d %%, Temperature: %d.%d C", humidity / 10, humidity % 10, temperature / 10, temperature % 10);
 
     return ESP_OK;
 }
@@ -230,7 +238,7 @@ esp_err_t tryRmt()
     
     MAIN_LOG_GPIO_CHANGE;
     
-    ESP_LOGI (tag, "Received %d symbols", rmt_rx_evt_data.num_symbols);
+    /*ESP_LOGI (tag, "Received %d symbols", rmt_rx_evt_data.num_symbols);
     
     for (size_t i = 0; i < rmt_rx_evt_data.num_symbols; ++i) {
         ESP_LOGI (tag
@@ -241,7 +249,7 @@ esp_err_t tryRmt()
             , rmt_rx_evt_data.received_symbols[i].level1 ? 'H' : 'L'
             , rmt_rx_evt_data.received_symbols[i].duration1
         );
-    }
+    }*/
 
     return DHT22Decoder (&rmt_rx_evt_data);
 }
