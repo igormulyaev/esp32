@@ -2,8 +2,11 @@
 #include "esp_check.h"
 
 // ===================================================================================================
-esp_err_t Dht22Rmt :: init (gpio_num_t dht22GpioNum)
+esp_err_t Dht22Rmt :: init (gpio_num_t dht22GpioNum, bool usePullup)
 {
+    this -> dht22GpioNum = dht22GpioNum;
+    this -> usePullup = usePullup;
+
     // --------------------------------------------------------------------------
     // Set up copy encoder
     rmt_copy_encoder_config_t cec;
@@ -47,7 +50,10 @@ esp_err_t Dht22Rmt :: init (gpio_num_t dht22GpioNum)
 
     // --------------------------------------------------------------------------
     // Enable pullup on GPIO
-    ESP_RETURN_ON_ERROR (gpio_set_pull_mode (dht22GpioNum, GPIO_PULLUP_ONLY), tag, "set pull mode failed");
+    if (usePullup)
+    {
+        ESP_RETURN_ON_ERROR (gpio_set_pull_mode (dht22GpioNum, GPIO_PULLUP_ONLY), tag, "set pull mode failed");
+    }
 
     // --------------------------------------------------------------------------
     // Create receive queue
@@ -73,8 +79,35 @@ esp_err_t Dht22Rmt :: init (gpio_num_t dht22GpioNum)
 // ===================================================================================================
 esp_err_t Dht22Rmt :: deinit ()
 {
-    // Implementation of deinitialization logic for DHT22 using RMT
-    return ESP_OK;
+    esp_err_t rc0 = txChannel != nullptr ? rmt_disable (txChannel) : ESP_OK;
+
+    esp_err_t rc1 = rxChannel != nullptr ? rmt_disable (rxChannel) : ESP_OK;
+
+    if (receiveQueue != nullptr) {
+        vQueueDelete (receiveQueue);
+        receiveQueue = nullptr;
+    }
+
+    esp_err_t rc2 = usePullup ? gpio_set_pull_mode (dht22GpioNum, GPIO_FLOATING) : ESP_OK;
+    usePullup = false;
+    
+    esp_err_t rc3 = txChannel != nullptr ? rmt_del_channel (txChannel) : ESP_OK;
+    txChannel = nullptr;
+
+    esp_err_t rc4 = rxChannel != nullptr ? rmt_del_channel (rxChannel) : ESP_OK;
+    rxChannel = nullptr;
+
+    esp_err_t rc5 = copyEncoder != nullptr ? rmt_del_encoder (copyEncoder) : ESP_OK;
+    copyEncoder = nullptr;
+    
+    dht22GpioNum = GPIO_NUM_NC;
+    
+    return rc0 != ESP_OK ? rc0 :
+           rc1 != ESP_OK ? rc1 :
+           rc2 != ESP_OK ? rc2 :
+           rc3 != ESP_OK ? rc3 :
+           rc4 != ESP_OK ? rc4 :
+           rc5;
 }
 
 // ===================================================================================================

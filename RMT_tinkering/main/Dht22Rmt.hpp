@@ -17,13 +17,16 @@ class Dht22Rmt
         Dht22Rmt () = default;
         ~Dht22Rmt () = default;
 
-        esp_err_t init (gpio_num_t dht22GpioNum);
+        esp_err_t init (gpio_num_t dht22GpioNum, bool usePullup = true);
         esp_err_t deinit ();
         esp_err_t readData (int &temperatureX10, int &humidityX10);
     
     private:
         static bool rmtRxDoneCallback (rmt_channel_handle_t channel, const rmt_rx_done_event_data_t *edata, void *user_data);
         esp_err_t decodeDht22 (const rmt_rx_done_event_data_t *rxData, int &temperatureX10, int &humidityX10);
+
+        gpio_num_t dht22GpioNum = GPIO_NUM_NC;
+        bool usePullup = false;
 
         rmt_encoder_handle_t copyEncoder = nullptr;
         rmt_channel_handle_t rxChannel = nullptr;
