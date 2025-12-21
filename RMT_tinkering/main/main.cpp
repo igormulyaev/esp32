@@ -31,30 +31,38 @@ extern "C" void app_main(void)
 {
     ESP_LOGI (tag, "Start");
 
-    for (int i = 2; i != 0; --i) {
-        if (dht22rmt.init (RMT_GPIO) == ESP_OK) {
-            ESP_LOGI (tag, "DHT22 RMT initialized");
-            int temperatureX10 = 0;
-            int humidityX10 = 0;
+    esp_reset_reason_t resetReason = esp_reset_reason();
 
-            for (int j = 2; j != 0; --j) {
-                if (dht22rmt.readData (temperatureX10, humidityX10) != ESP_OK) {
-                    break;
+    if (resetReason == ESP_RST_POWERON || resetReason == ESP_RST_SW) {
+        for (int i = 2; i != 0; --i) {
+            if (dht22rmt.init (RMT_GPIO) == ESP_OK) {
+                ESP_LOGI (tag, "DHT22 RMT initialized");
+                int temperatureX10 = 0;
+                int humidityX10 = 0;
+
+                for (int j = 2; j != 0; --j) {
+                    if (dht22rmt.readData (temperatureX10, humidityX10) != ESP_OK) {
+                        break;
+                    }
+                    ESP_LOGI (tag, "Temperature: %d.%d C, Humidity: %d.%d %%", temperatureX10 / 10, temperatureX10 % 10, humidityX10 / 10, humidityX10 % 10);
+                    
+                    vTaskDelay (pdMS_TO_TICKS(2000));
                 }
-                ESP_LOGI (tag, "Temperature: %d.%d C, Humidity: %d.%d %%", temperatureX10 / 10, temperatureX10 % 10, humidityX10 / 10, humidityX10 % 10);
-                
-                vTaskDelay (pdMS_TO_TICKS(2000));
+            }
+
+            esp_err_t rc = dht22rmt.deinit();
+            if (rc != ESP_OK) {
+                ESP_LOGE (tag, "DHT22 RMT deinit failed: %s", esp_err_to_name (rc));
+                break;
+            } 
+            else {
+                ESP_LOGI (tag, "DHT22 RMT deinitialized");
             }
         }
-
-        esp_err_t rc = dht22rmt.deinit();
-        if (rc != ESP_OK) {
-            ESP_LOGE (tag, "DHT22 RMT deinit failed: %s", esp_err_to_name (rc));
-            break;
-        } 
-        else {
-            ESP_LOGI (tag, "DHT22 RMT deinitialized");
-        }
     }
+    else {
+        ESP_LOGI (tag, "Stop processing due to reset reason %d", resetReason);
+    }
+
     ESP_LOGI (tag, "Finish");
 }

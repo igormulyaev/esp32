@@ -23,7 +23,7 @@ class Dht22Rmt
     
     private:
         static bool rmtRxDoneCallback (rmt_channel_handle_t channel, const rmt_rx_done_event_data_t *edata, void *user_data);
-        esp_err_t decodeDht22 (const rmt_rx_done_event_data_t *rxData, int &temperatureX10, int &humidityX10);
+        static esp_err_t decodeDht22 (const rmt_rx_done_event_data_t *rxData, int &temperatureX10, int &humidityX10);
 
         gpio_num_t dht22GpioNum = GPIO_NUM_NC;
         bool usePullup = false;
