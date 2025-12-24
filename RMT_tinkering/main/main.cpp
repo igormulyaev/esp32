@@ -9,8 +9,12 @@
 #include "freertos/queue.h"
 
 #include "Dht22Rmt.hpp"
+#include "Mhz19Uart.hpp"
 
 #define RMT_GPIO GPIO_NUM_5
+#define MHZ19_UART_NUM UART_NUM_1
+#define MHZ19_TX_PIN GPIO_NUM_17
+#define MHZ19_RX_PIN GPIO_NUM_16
 /*
 #define MAIN_LOG_GPIO GPIO_NUM_18
 #define RMT_LOG_GPIO GPIO_NUM_19
@@ -22,43 +26,72 @@ bool read_log_state = false;
 #define RMT_LOG_GPIO_CHANGE { read_log_state = !read_log_state; gpio_set_level (RMT_LOG_GPIO, read_log_state); }
 */
 
-const char * const tag = "main";
+static const char * const tag = "main";
 
 Dht22Rmt dht22rmt;
+Mhz19Uart mhz19uart;
 
 // ==========================================================================
-extern "C" void app_main(void)
+void testDht22 () 
+{
+    if (dht22rmt.init (RMT_GPIO) == ESP_OK) {
+        ESP_LOGI (tag, "DHT22 RMT initialized");
+        int temperatureX10 = 0;
+        int humidityX10 = 0;
+
+        for (int j = 3; j != 0; --j) {
+            if (dht22rmt.readData (temperatureX10, humidityX10) != ESP_OK) {
+                break;
+            }
+            ESP_LOGI (tag, "Temperature: %d.%d C, Humidity: %d.%d %%", temperatureX10 / 10, temperatureX10 % 10, humidityX10 / 10, humidityX10 % 10);
+            
+            vTaskDelay (pdMS_TO_TICKS(2000));
+        }
+    }
+
+    esp_err_t rc = dht22rmt.deinit ();
+    if (rc != ESP_OK) {
+        ESP_LOGE (tag, "DHT22 RMT deinit failed: %s", esp_err_to_name (rc));
+    } 
+    else {
+        ESP_LOGI (tag, "DHT22 RMT deinitialized");
+    }
+}
+
+// ==========================================================================
+void testMhz19Uart ()
+{
+    if (mhz19uart.init (MHZ19_UART_NUM, MHZ19_TX_PIN, MHZ19_RX_PIN) == ESP_OK) {
+        ESP_LOGI (tag, "MH-Z19 UART initialized");
+
+        while (true) {
+            if (mhz19uart.readCo2 () != ESP_OK) {
+                break;
+            }
+            vTaskDelay (pdMS_TO_TICKS(30000));
+        }
+    }
+
+    esp_err_t rc = mhz19uart.deinit ();
+    if (rc != ESP_OK) {
+        ESP_LOGE (tag, "MH-Z19 UART deinit failed: %s", esp_err_to_name (rc));
+    } 
+    else {
+        ESP_LOGI (tag, "MH-Z19 UART deinitialized");
+    }
+}
+
+// ==========================================================================
+extern "C" 
+void app_main(void)
 {
     ESP_LOGI (tag, "Start");
 
     esp_reset_reason_t resetReason = esp_reset_reason();
 
     if (resetReason == ESP_RST_POWERON || resetReason == ESP_RST_SW) {
-        for (int i = 2; i != 0; --i) {
-            if (dht22rmt.init (RMT_GPIO) == ESP_OK) {
-                ESP_LOGI (tag, "DHT22 RMT initialized");
-                int temperatureX10 = 0;
-                int humidityX10 = 0;
-
-                for (int j = 2; j != 0; --j) {
-                    if (dht22rmt.readData (temperatureX10, humidityX10) != ESP_OK) {
-                        break;
-                    }
-                    ESP_LOGI (tag, "Temperature: %d.%d C, Humidity: %d.%d %%", temperatureX10 / 10, temperatureX10 % 10, humidityX10 / 10, humidityX10 % 10);
-                    
-                    vTaskDelay (pdMS_TO_TICKS(2000));
-                }
-            }
-
-            esp_err_t rc = dht22rmt.deinit();
-            if (rc != ESP_OK) {
-                ESP_LOGE (tag, "DHT22 RMT deinit failed: %s", esp_err_to_name (rc));
-                break;
-            } 
-            else {
-                ESP_LOGI (tag, "DHT22 RMT deinitialized");
-            }
-        }
+        //testDht22 ();
+        testMhz19Uart ();
     }
     else {
         ESP_LOGI (tag, "Stop processing due to reset reason %d", resetReason);

@@ -39,6 +39,9 @@ class Dht22Rmt
         static const rmt_symbol_word_t startSymbol;
         static const rmt_transmit_config_t transmitConfig;
         static const rmt_receive_config_t receiveConfig;
+
+        Dht22Rmt (const Dht22Rmt &) = delete;
+        Dht22Rmt & operator= (const Dht22Rmt &) = delete;
 };
 
 #endif  // DHT22RMT_HPP
