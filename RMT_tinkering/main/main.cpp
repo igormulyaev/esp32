@@ -12,9 +12,6 @@
 #include "Mhz19Uart.hpp"
 
 #define RMT_GPIO GPIO_NUM_5
-#define MHZ19_UART_NUM UART_NUM_1
-#define MHZ19_TX_PIN GPIO_NUM_17
-#define MHZ19_RX_PIN GPIO_NUM_16
 /*
 #define MAIN_LOG_GPIO GPIO_NUM_18
 #define RMT_LOG_GPIO GPIO_NUM_19
@@ -29,7 +26,16 @@ bool read_log_state = false;
 static const char * const tag = "main";
 
 Dht22Rmt dht22rmt;
-Mhz19Uart mhz19uart;
+
+class Mhz19UartConfig : public Mhz19Uart<Mhz19UartConfig>
+{
+    public:
+        static constexpr uart_port_t uartNum = UART_NUM_1;
+        static constexpr gpio_num_t txPin = GPIO_NUM_17;
+        static constexpr gpio_num_t rxPin = GPIO_NUM_16;
+};
+
+Mhz19Uart<Mhz19UartConfig> mhz19uart;
 
 // ==========================================================================
 void testDht22 () 
@@ -61,13 +67,16 @@ void testDht22 ()
 // ==========================================================================
 void testMhz19Uart ()
 {
-    if (mhz19uart.init (MHZ19_UART_NUM, MHZ19_TX_PIN, MHZ19_RX_PIN) == ESP_OK) {
+    if (mhz19uart.init() == ESP_OK) {
         ESP_LOGI (tag, "MH-Z19 UART initialized");
 
+        int co2 = 0;
+        int temperature = 0;
         while (true) {
-            if (mhz19uart.readCo2 () != ESP_OK) {
+            if (mhz19uart.readCo2 (co2, temperature) != ESP_OK) {
                 break;
             }
+            ESP_LOGI (tag, "CO2 Concentration: %d ppm, Temperature: %d C", co2, temperature);
             vTaskDelay (pdMS_TO_TICKS(30000));
         }
     }
