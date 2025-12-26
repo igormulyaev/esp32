@@ -27,7 +27,7 @@ static const char * const tag = "main";
 
 Dht22Rmt dht22rmt;
 
-class Mhz19UartConfig : public Mhz19Uart<Mhz19UartConfig>
+class Mhz19Uart_1_17_16 : public Mhz19Uart <Mhz19Uart_1_17_16>
 {
     public:
         static constexpr uart_port_t uartNum = UART_NUM_1;
@@ -35,7 +35,7 @@ class Mhz19UartConfig : public Mhz19Uart<Mhz19UartConfig>
         static constexpr gpio_num_t rxPin = GPIO_NUM_16;
 };
 
-Mhz19Uart<Mhz19UartConfig> mhz19uart;
+Mhz19Uart_1_17_16 mhz19uart;
 
 // ==========================================================================
 void testDht22 () 
@@ -92,7 +92,7 @@ void testMhz19Uart ()
 
 // ==========================================================================
 extern "C" 
-void app_main(void)
+void app_main ()
 {
     ESP_LOGI (tag, "Start");
 
