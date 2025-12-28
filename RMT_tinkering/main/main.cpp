@@ -12,16 +12,6 @@
 #include "Mhz19Uart.hpp"
 
 #define RMT_GPIO GPIO_NUM_5
-/*
-#define MAIN_LOG_GPIO GPIO_NUM_18
-#define RMT_LOG_GPIO GPIO_NUM_19
-
-bool write_log_state = false;
-bool read_log_state = false;
-
-#define MAIN_LOG_GPIO_CHANGE { write_log_state = !write_log_state; gpio_set_level (MAIN_LOG_GPIO, write_log_state); }
-#define RMT_LOG_GPIO_CHANGE { read_log_state = !read_log_state; gpio_set_level (RMT_LOG_GPIO, read_log_state); }
-*/
 
 static const char * const tag = "main";
 
