@@ -50,15 +50,11 @@ static void advInit ()
 
     ESP_LOGI(tag, "device address: %02x:%02x:%02x:%02x:%02x:%02x", addrVal[0], addrVal[1], addrVal[2], addrVal[3], addrVal[4], addrVal[5]);
 
-    // Start advertising
-    const char *name = ble_svc_gap_device_name();
-    ESP_LOGI(tag, "starting advertising with name: %s", name);
-
     // Set advertisement data
     ble_hs_adv_fields advFields = {0};
 
-    advFields.name = (const uint8_t *)name;
-    advFields.name_len = strlen (name);
+    advFields.name = (const uint8_t *)deviceName;
+    advFields.name_len = strlen (deviceName);
     advFields.name_is_complete = 1;
     
     advFields.appearance = BLE_GAP_APPEARANCE_GENERIC_TAG;
