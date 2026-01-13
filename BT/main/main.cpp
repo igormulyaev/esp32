@@ -27,5 +27,6 @@ void app_main ()
     ESP_RETURN_VOID_ON_ERROR(nvsInit(), tag, "nvs flash init failed");
 
     ESP_LOGI (tag, "NVS initialized, starting BLE test");
+    
     testBle();
 }

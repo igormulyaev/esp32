@@ -6,7 +6,7 @@
 #include "host/util/util.h"
 //#include "nimble/ble.h"
 #include "nimble/nimble_port.h"
-//#include "nimble/nimble_port_freertos.h"
+#include "nimble/nimble_port_freertos.h"
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 
@@ -104,7 +104,17 @@ static int gattHandler(uint16_t conn_handle, uint16_t attr_handle, struct ble_ga
             char buf[ctxt->om->om_len + 1];
             memcpy(buf, ctxt->om->om_data, ctxt->om->om_len);
             buf[ctxt->om->om_len] = '\0';
-            ESP_LOGI (tag, "gattHandler: Data received in write event, conn_handle = %d, attr_handle = %d, data = %s", conn_handle, attr_handle, buf);
+            for (char *p = buf; *p != '\0'; p++) {
+                switch (*p) {
+                case '\r':
+                    *p = '<';
+                    break;
+                case '\n':
+                    *p = '|';
+                    break;
+                }
+            }
+            ESP_LOGI (tag, "gattHandler: Data received in write event, conn_handle = %d, attr_handle = %d, len = %d, data = %s", conn_handle, attr_handle, ctxt->om->om_len, buf);
         }
         break;
 
@@ -409,11 +419,23 @@ static esp_err_t nimbleInit ()
 }
 
 // ===============================================================================
+static void nimbleHostTask(void *param) 
+{
+    ESP_LOGI (tag, "nimbleHostTask: starting nimble_port_run");
+
+    nimble_port_run();
+    
+    ESP_LOGI (tag, "nimbleHostTask: nimble_port_run returned, deinitializing nimble port");
+    
+    nimble_port_freertos_deinit();
+}
+
+// ===============================================================================
 void testBle() 
 {
     ESP_RETURN_VOID_ON_ERROR(nimbleInit(), tag, "nimble stack init failed");
     
     ESP_LOGI (tag, "testBle: nimble stack initialized, running main loop");
 
-    nimble_port_run();
+    nimble_port_freertos_init (nimbleHostTask);
 }
