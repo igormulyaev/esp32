@@ -124,13 +124,14 @@ static esp_err_t gapGattInit ()
     ble_svc_gatt_init();
     ESP_LOGI (tag, "gapGattInit: GATT service initialized");
 
-    ESP_RETURN_ON_FALSE (ble_gatts_count_cfg(gattSvcDefs) == 0, ESP_FAIL, tag, "failed to count GATT configuration");
+    int rc;
+    ESP_RETURN_ON_FALSE ((rc = ble_gatts_count_cfg (gattSvcDefs)) == 0, ESP_FAIL, tag, "failed to count GATT configuration, rc = %d", rc);
     ESP_LOGI (tag, "gapGattInit: GATT configuration counted");
 
-    ESP_RETURN_ON_FALSE (ble_gatts_add_svcs(gattSvcDefs) == 0, ESP_FAIL, tag, "failed to add GATT services");
+    ESP_RETURN_ON_FALSE ((rc = ble_gatts_add_svcs(gattSvcDefs)) == 0, ESP_FAIL, tag, "failed to add GATT services, rc = %d", rc);
     ESP_LOGI (tag, "gapGattInit: GATT services added");
 
-    ESP_RETURN_ON_FALSE (ble_svc_gap_device_name_set (deviceName) == 0, ESP_FAIL, tag, "failed to set device name");
+    ESP_RETURN_ON_FALSE ((rc = ble_svc_gap_device_name_set (deviceName)) == 0, ESP_FAIL, tag, "failed to set device name, rc = %d", rc);
     ESP_LOGI (tag, "gapGattInit: device name set");
 
     //ESP_RETURN_ON_FALSE (ble_svc_gap_device_appearance_set (BLE_GAP_APPEARANCE_GENERIC_TAG) == 0, ESP_FAIL, tag, "failed to set device appearance");
@@ -193,18 +194,19 @@ static void printConnDesc(const struct ble_gap_conn_desc *desc)
 // ===============================================================================
 static void advInit () 
 {
+    int rc;
     // Make sure we have proper BT identity address set
-    ESP_RETURN_VOID_ON_FALSE(ble_hs_util_ensure_addr(0) == 0, ESP_FAIL, tag, "device does not have any available bt address");
+    ESP_RETURN_VOID_ON_FALSE((rc = ble_hs_util_ensure_addr (0)) == 0, ESP_FAIL, tag, "device does not have any available bt address, rc = %d", rc);
     ESP_LOGI (tag, "advInit: BT exists");
 
     // Figure out BT address to use while advertising
     uint8_t ownAddrType;
-    ESP_RETURN_VOID_ON_FALSE(ble_hs_id_infer_auto (0, &ownAddrType) == 0, ESP_FAIL, tag, "failed to infer address type");
+    ESP_RETURN_VOID_ON_FALSE((rc = ble_hs_id_infer_auto (0, &ownAddrType)) == 0, ESP_FAIL, tag, "failed to infer address type, rc = %d", rc);
     ESP_LOGI (tag, "advInit: got addr type: %d", ownAddrType);
 
     // Copy device address to addrVal
     uint8_t addrVal[6];
-    ESP_RETURN_VOID_ON_FALSE(ble_hs_id_copy_addr(ownAddrType, addrVal, nullptr) == 0, ESP_FAIL, tag, "failed to copy device address");
+    ESP_RETURN_VOID_ON_FALSE((rc = ble_hs_id_copy_addr (ownAddrType, addrVal, nullptr)) == 0, ESP_FAIL, tag, "failed to copy device address, rc = %d", rc);
     ESP_LOGI(tag, "advInit: device address: %02x:%02x:%02x:%02x:%02x:%02x", addrVal[0], addrVal[1], addrVal[2], addrVal[3], addrVal[4], addrVal[5]);
 
     // Set advertisement data
@@ -233,7 +235,7 @@ static void advInit ()
     advFields.le_role = BLE_GAP_LE_ROLE_PERIPHERAL;
     advFields.le_role_is_present = 1;
 
-    ESP_RETURN_VOID_ON_FALSE (ble_gap_adv_set_fields (&advFields) == 0, ESP_FAIL, tag, "failed to set advertising data");
+    ESP_RETURN_VOID_ON_FALSE ((rc = ble_gap_adv_set_fields (&advFields)) == 0, ESP_FAIL, tag, "failed to set advertising data, rc = %d", rc);
     ESP_LOGI (tag, "advInit: advertising fields set");
 
     // Set scan response data
@@ -248,7 +250,7 @@ static void advInit ()
     rspFields.name_len = strlen (deviceName);
     rspFields.name_is_complete = 1;
 
-    ESP_RETURN_VOID_ON_FALSE (ble_gap_adv_rsp_set_fields (&rspFields) == 0, ESP_FAIL, tag, "failed to set scan response data");
+    ESP_RETURN_VOID_ON_FALSE ((rc = ble_gap_adv_rsp_set_fields (&rspFields)) == 0, ESP_FAIL, tag, "failed to set scan response data, rc = %d", rc);
     ESP_LOGI (tag, "advInit: scan response data set");
 
     // Set non-connectable and general discoverable mode to be a beacon
@@ -259,7 +261,7 @@ static void advInit ()
     advParams.disc_mode = BLE_GAP_DISC_MODE_GEN;
 
     // Start advertising
-    ESP_RETURN_VOID_ON_FALSE (ble_gap_adv_start(ownAddrType, nullptr, BLE_HS_FOREVER, &advParams, gapHandler, nullptr) == 0, ESP_FAIL, tag, "failed to start advertising");
+    ESP_RETURN_VOID_ON_FALSE ((rc = ble_gap_adv_start (ownAddrType, nullptr, BLE_HS_FOREVER, &advParams, gapHandler, nullptr)) == 0, ESP_FAIL, tag, "failed to start advertising, rc = %d", rc);
     ESP_LOGI (tag, "advInit: advertising started");
 }
 
@@ -275,13 +277,11 @@ static int gapHandler (struct ble_gap_event *event, void *arg)
         ESP_LOGI (tag, "gapHandler: BLE_GAP_EVENT_CONNECT, status = %d", event->connect.status);
 
         if (event->connect.status == 0) {
-            rc = ble_gap_conn_find(event->connect.conn_handle, &desc);
-            assert(rc == 0);
+            ESP_RETURN_ON_FALSE ((rc = ble_gap_conn_find (event->connect.conn_handle, &desc)) == 0, rc, tag, "failed to find connection, rc = %d", rc);
             printConnDesc (&desc);
         }
-
-        if (event->connect.status != 0 || CONFIG_BT_NIMBLE_MAX_CONNECTIONS > 1) {
-            /* Connection failed or if multiple connection allowed; resume advertising. */
+        else {
+            // Connection failed, resume advertising.
             advInit();
         }
         break;
@@ -289,8 +289,6 @@ static int gapHandler (struct ble_gap_event *event, void *arg)
     case BLE_GAP_EVENT_DISCONNECT:
         ESP_LOGI (tag, "gapHandler: BLE_GAP_EVENT_DISCONNECT, reason = %d", event->disconnect.reason);
         printConnDesc (&event->disconnect.conn);
-
-        //conn_handle_subs[event->disconnect.conn.conn_handle] = false;
 
         // Connection terminated; resume advertising.
         advInit();
@@ -300,9 +298,7 @@ static int gapHandler (struct ble_gap_event *event, void *arg)
         // The central has updated the connection parameters.
         ESP_LOGI (tag, "gapHandler: BLE_GAP_EVENT_CONN_UPDATE, status = %d", event->conn_update.status);
 
-        rc = ble_gap_conn_find(event->conn_update.conn_handle, &desc);
-        assert(rc == 0);
-
+        ESP_RETURN_ON_FALSE ((rc = ble_gap_conn_find (event->connect.conn_handle, &desc)) == 0, rc, tag, "failed to find connection, rc = %d", rc);
         printConnDesc (&desc);
         break;
 
