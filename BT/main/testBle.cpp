@@ -334,6 +334,39 @@ static int gapHandler (struct ble_gap_event *event, void *arg)
         );
         //conn_handle_subs[event->subscribe.conn_handle] = true;
         break;
+    
+    case BLE_GAP_EVENT_LINK_ESTAB:
+        ESP_LOGI (tag, "gapHandler: BLE_GAP_EVENT_LINK_ESTAB, conn_handle = %d, status = %d", event->link_estab.conn_handle, event->link_estab.status);
+        break;
+
+    case BLE_GAP_EVENT_DATA_LEN_CHG:
+        ESP_LOGI (tag, "gapHandler: BLE_GAP_EVENT_DATA_LEN_CHG, conn_handle = %d, max_tx_octets = %d, max_tx_time = %d, max_rx_octets = %d, max_rx_time = %d"
+            , event->data_len_chg.conn_handle
+            , event->data_len_chg.max_tx_octets
+            , event->data_len_chg.max_tx_time
+            , event->data_len_chg.max_rx_octets
+            , event->data_len_chg.max_rx_time
+        );
+        break;
+    case BLE_GAP_EVENT_CONN_UPDATE_REQ:
+        ESP_LOGI (tag, "gapHandler: BLE_GAP_EVENT_CONN_UPDATE_REQ, conn_handle = %d", event->conn_update_req.conn_handle);
+        ESP_LOGI (tag, "    Peer interval_min = %d, interval_max = %d, latency = %d, supervision_timeout = %d, min_ce_len = %d, max_ce_len = %d"
+            , event->conn_update_req.peer_params->itvl_min
+            , event->conn_update_req.peer_params->itvl_max
+            , event->conn_update_req.peer_params->latency
+            , event->conn_update_req.peer_params->supervision_timeout
+            , event->conn_update_req.peer_params->min_ce_len
+            , event->conn_update_req.peer_params->max_ce_len
+        );
+        ESP_LOGI (tag, "    Self interval_min = %d, interval_max = %d, latency = %d, supervision_timeout = %d, min_ce_len = %d, max_ce_len = %d"
+            , event->conn_update_req.self_params->itvl_min
+            , event->conn_update_req.self_params->itvl_max
+            , event->conn_update_req.self_params->latency
+            , event->conn_update_req.self_params->supervision_timeout
+            , event->conn_update_req.self_params->min_ce_len
+            , event->conn_update_req.self_params->max_ce_len
+        );
+        break;
 
     default:
         ESP_LOGW (tag, "gapHandler: Unhandled GAP event: %d", event->type);
