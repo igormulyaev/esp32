@@ -96,6 +96,18 @@ static const struct ble_gatt_svc_def gattSvcDefs[] = {
 };
 
 // ===============================================================================
+void updateSubscriptionStatus (bool subscribed)
+{
+    if (subscribed != isSubscribed) {
+        isSubscribed = subscribed;
+
+        BleData cmdBuf;
+        cmdBuf.cmd.zero = 0;
+        cmdBuf.cmd.command = subscribed ? BleData::BleCommand::BleCommandValue::cmdSubscribe : BleData::BleCommand::BleCommandValue::cmdUnsubscribe;
+        xQueueSend (receiveBleQueue, &cmdBuf, 0);
+    }
+}
+// ===============================================================================
 static int gattHandler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
     switch (ctxt->op) {
@@ -108,11 +120,11 @@ static int gattHandler(uint16_t conn_handle, uint16_t attr_handle, struct ble_ga
             ESP_LOGI (tag, "gattHandler: Data received in write event, conn_handle = %d, attr_handle = %d, len = %d", conn_handle, attr_handle, ctxt->om->om_len);
             
             if (receiveBleQueue != nullptr) {
-                bleData buf;
+                BleData buf;
                 for (size_t dataLen = ctxt->om->om_len; dataLen != 0; ) {
-                    size_t copyLen = (dataLen < sizeof(buf.data)) ? dataLen : sizeof (buf.data);
-                    memcpy (buf.data, ctxt->om->om_data + (ctxt->om->om_len - dataLen), copyLen);
-                    buf.length = copyLen;
+                    size_t copyLen = (dataLen < sizeof(buf.str.data)) ? dataLen : sizeof (buf.str.data);
+                    memcpy (buf.str.data, ctxt->om->om_data + (ctxt->om->om_len - dataLen), copyLen);
+                    buf.str.length = copyLen;
                     dataLen -= copyLen;
                     xQueueSend (receiveBleQueue, &buf, 0);
                 }
@@ -304,7 +316,7 @@ static int gapHandler (struct ble_gap_event *event, void *arg)
     case BLE_GAP_EVENT_DISCONNECT:
         ESP_LOGI (tag, "gapHandler: BLE_GAP_EVENT_DISCONNECT, reason = %d", event->disconnect.reason);
         printConnDesc (&event->disconnect.conn);
-        isSubscribed = false;
+        updateSubscriptionStatus (false);
         // Connection terminated; resume advertising.
         advInit();
         break;
@@ -337,7 +349,7 @@ static int gapHandler (struct ble_gap_event *event, void *arg)
             , event->subscribe.prev_indicate
             , event->subscribe.cur_indicate
         );
-        isSubscribed = (event->subscribe.cur_notify != 0) || (event->subscribe.cur_indicate != 0);
+        updateSubscriptionStatus (event->subscribe.cur_notify != 0 || event->subscribe.cur_indicate != 0);
         break;
     
     case BLE_GAP_EVENT_LINK_ESTAB:

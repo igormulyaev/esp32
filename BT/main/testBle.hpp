@@ -5,10 +5,22 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
-struct bleData 
+constexpr size_t BLE_DATA_SIZE = 64;
+
+union BleData 
 {
-    size_t length;
-    char data[64 - sizeof(size_t)];
+    struct BleString {
+        uint16_t length;
+        char data[BLE_DATA_SIZE - sizeof(length)];
+    } str;
+    
+    struct BleCommand {
+        uint16_t zero;
+        enum BleCommandValue {
+            cmdSubscribe,
+            cmdUnsubscribe
+        } command;
+    } cmd;
 };
 
 extern QueueHandle_t receiveBleQueue;
