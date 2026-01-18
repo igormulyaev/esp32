@@ -16,10 +16,14 @@
 static const char * const tag = "testBle";
 static const char * const deviceName = "CO2 Sensor";
 
+QueueHandle_t receiveBleQueue = nullptr;
+
 extern "C" void ble_store_config_init(void);
 
 static int gattHandler (uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg);
 static int gapHandler (struct ble_gap_event *event, void *arg);
+
+static bool isSubscribed = false;
 
 static uint16_t gattReadValHandle;
 
@@ -101,20 +105,21 @@ static int gattHandler(uint16_t conn_handle, uint16_t attr_handle, struct ble_ga
 
     case BLE_GATT_ACCESS_OP_WRITE_CHR:
         {
-            char buf[ctxt->om->om_len + 1];
-            memcpy(buf, ctxt->om->om_data, ctxt->om->om_len);
-            buf[ctxt->om->om_len] = '\0';
-            for (char *p = buf; *p != '\0'; p++) {
-                switch (*p) {
-                case '\r':
-                    *p = '<';
-                    break;
-                case '\n':
-                    *p = '|';
-                    break;
+            ESP_LOGI (tag, "gattHandler: Data received in write event, conn_handle = %d, attr_handle = %d, len = %d", conn_handle, attr_handle, ctxt->om->om_len);
+            
+            if (receiveBleQueue != nullptr) {
+                bleData buf;
+                for (size_t dataLen = ctxt->om->om_len; dataLen != 0; ) {
+                    size_t copyLen = (dataLen < sizeof(buf.data)) ? dataLen : sizeof (buf.data);
+                    memcpy (buf.data, ctxt->om->om_data + (ctxt->om->om_len - dataLen), copyLen);
+                    buf.length = copyLen;
+                    dataLen -= copyLen;
+                    xQueueSend (receiveBleQueue, &buf, 0);
                 }
             }
-            ESP_LOGI (tag, "gattHandler: Data received in write event, conn_handle = %d, attr_handle = %d, len = %d, data = %s", conn_handle, attr_handle, ctxt->om->om_len, buf);
+            else {
+                ESP_LOGW (tag, "gattHandler: receiveBleQueue is nullptr, data hasn't sent to a queue");
+            }
         }
         break;
 
@@ -299,7 +304,7 @@ static int gapHandler (struct ble_gap_event *event, void *arg)
     case BLE_GAP_EVENT_DISCONNECT:
         ESP_LOGI (tag, "gapHandler: BLE_GAP_EVENT_DISCONNECT, reason = %d", event->disconnect.reason);
         printConnDesc (&event->disconnect.conn);
-
+        isSubscribed = false;
         // Connection terminated; resume advertising.
         advInit();
         break;
@@ -332,7 +337,7 @@ static int gapHandler (struct ble_gap_event *event, void *arg)
             , event->subscribe.prev_indicate
             , event->subscribe.cur_indicate
         );
-        //conn_handle_subs[event->subscribe.conn_handle] = true;
+        isSubscribed = (event->subscribe.cur_notify != 0) || (event->subscribe.cur_indicate != 0);
         break;
     
     case BLE_GAP_EVENT_LINK_ESTAB:
@@ -365,6 +370,13 @@ static int gapHandler (struct ble_gap_event *event, void *arg)
             , event->conn_update_req.self_params->supervision_timeout
             , event->conn_update_req.self_params->min_ce_len
             , event->conn_update_req.self_params->max_ce_len
+        );
+        break;
+    case BLE_GAP_EVENT_NOTIFY_TX:
+        ESP_LOGI (tag, "gapHandler: BLE_GAP_EVENT_NOTIFY_TX, conn_handle = %d, attr_handle = %d, status = %d"
+            , event->notify_tx.conn_handle
+            , event->notify_tx.attr_handle
+            , event->notify_tx.status
         );
         break;
 
@@ -471,4 +483,27 @@ void testBle()
     ESP_LOGI (tag, "testBle: nimble stack initialized, running main loop");
 
     nimble_port_freertos_init (nimbleHostTask);
+}
+
+// ===============================================================================
+esp_err_t sendBle (const char *str, size_t len)
+{
+    ESP_LOGI (tag, "sendBle: sending %d bytes", len);
+
+    if (isSubscribed) {
+        struct os_mbuf * om;
+        ESP_RETURN_ON_FALSE((om = ble_hs_mbuf_from_flat (str, len)) != nullptr, ESP_FAIL, tag, "sendBle: ble_hs_mbuf_from_flat failed");
+
+        int rc = ble_gatts_notify_custom (0 /* conn_handle */, gattReadValHandle, om);
+        if (rc != 0) {
+            ESP_LOGE (tag, "sendBle: ble_gatts_notify_custom failed, rc = %d", rc);
+            os_mbuf_free_chain (om);
+            return ESP_FAIL;
+        }
+        ESP_LOGI (tag, "sendBle: notification sent");
+    }
+    else {
+        ESP_LOGW (tag, "sendBle: no subscribers, skipping notification");
+    }
+    return ESP_OK;
 }
