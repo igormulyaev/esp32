@@ -31,17 +31,18 @@ void app_main ()
     
     receiveBleQueue = xQueueCreate (16, sizeof(BleData));
 
-    testBle();
+    startBle();
 
     BleData rxBuf;
 
     esp_err_t rc = ESP_OK;
     int n = 0;
 
+    TickType_t timeToWait = portMAX_DELAY;
     do {
-        BaseType_t q = xQueueReceive(receiveBleQueue, &rxBuf, 10000 / portTICK_PERIOD_MS);
+        BaseType_t q = xQueueReceive(receiveBleQueue, &rxBuf, timeToWait);
         if (q == pdTRUE) {
-            if (rxBuf.str.length !=0) {
+            if (rxBuf.str.length != 0) {
                 const char * src = rxBuf.str.data;
                 char sBuf[80];
                 char * dst = sBuf;
@@ -65,15 +66,20 @@ void app_main ()
                 ESP_LOGI (tag, "Received data (%d bytes): %s", rxBuf.str.length, sBuf);
             }
             else {
-                switch (rxBuf.cmd.command) {
-                case BleData::BleCommand::BleCommandValue::cmdSubscribe:
+                switch (rxBuf.notify.value) {
+                case BleData::BleNotification::Subscribe:
                     ESP_LOGI (tag, "Received command: Subscribe");
+                    rc = sendBle ("Hello\r\n", 7);
+                    timeToWait = 10000 / portTICK_PERIOD_MS;
                     break;
-                case BleData::BleCommand::BleCommandValue::cmdUnsubscribe:
+
+                case BleData::BleNotification::Unsubscribe:
                     ESP_LOGI (tag, "Received command: Unsubscribe");
+                    timeToWait = portMAX_DELAY;
                     break;
+
                 default:
-                    ESP_LOGW (tag, "Received unknown command: %d", rxBuf.cmd.command);
+                    ESP_LOGW (tag, "Received unknown command: %d", rxBuf.notify.value);
                     break;
                 }
             }

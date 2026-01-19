@@ -102,8 +102,8 @@ void updateSubscriptionStatus (bool subscribed)
         isSubscribed = subscribed;
 
         BleData cmdBuf;
-        cmdBuf.cmd.zero = 0;
-        cmdBuf.cmd.command = subscribed ? BleData::BleCommand::BleCommandValue::cmdSubscribe : BleData::BleCommand::BleCommandValue::cmdUnsubscribe;
+        cmdBuf.notify.zero = 0;
+        cmdBuf.notify.value = subscribed ? BleData::BleNotification::Subscribe : BleData::BleNotification::Unsubscribe;
         xQueueSend (receiveBleQueue, &cmdBuf, 0);
     }
 }
@@ -488,11 +488,11 @@ static void nimbleHostTask(void *param)
 }
 
 // ===============================================================================
-void testBle() 
+void startBle() 
 {
     ESP_RETURN_VOID_ON_ERROR(nimbleInit(), tag, "nimble stack init failed");
     
-    ESP_LOGI (tag, "testBle: nimble stack initialized, running main loop");
+    ESP_LOGI (tag, "startBle: nimble stack initialized, running main loop");
 
     nimble_port_freertos_init (nimbleHostTask);
 }

@@ -9,23 +9,24 @@ constexpr size_t BLE_DATA_SIZE = 64;
 
 union BleData 
 {
-    struct BleString {
-        uint16_t length;
+    struct {
+        uint8_t length;
         char data[BLE_DATA_SIZE - sizeof(length)];
     } str;
     
-    struct BleCommand {
-        uint16_t zero;
-        enum BleCommandValue {
-            cmdSubscribe,
-            cmdUnsubscribe
-        } command;
-    } cmd;
+    enum BleNotification {
+        Subscribe,
+        Unsubscribe
+    };
+    struct {
+        uint8_t zero;
+        BleNotification value;
+    } notify;
 };
 
 extern QueueHandle_t receiveBleQueue;
 
-void testBle();
+void startBle();
 esp_err_t sendBle (const char *str, size_t len);
 
 #endif // TEST_BLE_HPP
