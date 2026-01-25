@@ -1,10 +1,25 @@
-#include "consoleBle.hpp"
+#include <string>
+#include <string_view>
 
 #include "esp_check.h"
 #include "nvs_flash.h"
 #include "freertos/FreeRTOS.h"
 
+#include "consoleBle.hpp"
+#include "Mhz19Uart.hpp"
+
 static const char * const tag = "main";
+
+// ===============================================================================
+class Mhz19Uart_1_17_16 : public Mhz19Uart <Mhz19Uart_1_17_16>
+{
+    public:
+        static constexpr uart_port_t uartNum = UART_NUM_1;
+        static constexpr gpio_num_t txPin = GPIO_NUM_17;
+        static constexpr gpio_num_t rxPin = GPIO_NUM_16;
+};
+
+Mhz19Uart_1_17_16 mhz19uart;
 
 // ===============================================================================
 static esp_err_t nvsInit () 
@@ -20,57 +35,79 @@ static esp_err_t nvsInit ()
 }
 
 // ===============================================================================
-extern "C"
-void app_main () 
+esp_err_t readAndSendCo2 () 
 {
-    ESP_LOGI (tag, "starting app_main");
+    int co2 = 0;
+    int temperature = 0;
+    const char * err = nullptr;
 
-    ESP_RETURN_VOID_ON_ERROR(nvsInit(), tag, "nvs flash init failed");
+    esp_err_t rc = mhz19uart.readCo2 (co2, temperature, err, true);
+    if (rc != ESP_OK) {
+        return conBle::sendBle (err, strlen(err));
+    }
 
-    ESP_LOGI (tag, "NVS initialized, starting BLE test");
+    char buf[64];
+    int len = snprintf (buf, sizeof(buf), "%s\r\n", err);
     
-    conBle::receiveBleQueue = xQueueCreate (16, sizeof(conBle::BleData));
+    rc = conBle::sendBle (buf, len);
+    if (rc != ESP_OK) {
+        return rc;
+    }
 
-    conBle::startBle("CO2 Sensor");
+    len = snprintf (buf, sizeof(buf), "CO2: %d ppm, Temp: %d C\r\n", co2, temperature);
+    return conBle::sendBle (buf, len);
+}
 
+// ===============================================================================
+esp_err_t processCommand (const std::string_view &cmd) 
+{
+    ESP_LOGI (tag, "Command received: %.*s", (int)cmd.size(), cmd.data());
+
+    return readAndSendCo2();
+}
+
+// ===============================================================================
+void mainLoop () 
+{
     conBle::BleData rxBuf;
+    std::string receivedData;
+    TickType_t timeToWait = portMAX_DELAY;
 
     esp_err_t rc = ESP_OK;
-    int n = 0;
 
-    TickType_t timeToWait = portMAX_DELAY;
-    do {
+    while (rc == ESP_OK) {
         BaseType_t q = xQueueReceive(conBle::receiveBleQueue, &rxBuf, timeToWait);
         if (q == pdTRUE) {
             if (rxBuf.str.length != 0) {
-                const char * src = rxBuf.str.data;
-                char sBuf[80];
-                char * dst = sBuf;
-                for (size_t i = rxBuf.str.length; i != 0; --i, ++src) {
-                    switch (*src) {
-                    case '\r':
-                        *dst++ = 0xe2;
-                        *dst++ = 0x90;
-                        *dst++ = 0x8d;
-                        break;
-                    case '\n':
-                        *dst++ = 0xe2;
-                        *dst++ = 0x90;
-                        *dst++ = 0x8a;
-                        break;
-                    default:
-                        *dst++ = *src;
-                    }
+                size_t startFindPos = receivedData.size();
+                if (startFindPos != 0) {
+                    --startFindPos;
                 }
-                *dst = '\0';
-                ESP_LOGI (tag, "Received data (%d bytes): %s", rxBuf.str.length, sBuf);
+                receivedData.append(rxBuf.str.data, rxBuf.str.length);
+
+                do {
+                    size_t endPos = receivedData.find("\r\n", startFindPos, 2);
+                    if (endPos == std::string::npos) {
+                        break;
+                    }
+                    std::string_view line (&receivedData[0], endPos);
+                    rc = processCommand (line);
+
+                    receivedData.erase(0, endPos + 2);
+                    startFindPos = 0;
+                    //rc = readAndSendCo2();
+                } while (true);
             }
             else {
                 switch (rxBuf.notify.value) {
                 case conBle::BleData::BleNotification::Subscribe:
                     ESP_LOGI (tag, "Received command: Subscribe");
                     rc = conBle::sendBle ("Hello\r\n", 7);
-                    timeToWait = 10000 / portTICK_PERIOD_MS;
+                    if (rc != ESP_OK) {
+                        break;
+                    }
+                    //rc = readAndSendCo2();
+                    //timeToWait = 30000 / portTICK_PERIOD_MS;
                     break;
 
                 case conBle::BleData::BleNotification::Unsubscribe:
@@ -85,12 +122,39 @@ void app_main ()
             }
         }
         else {
-            char txBuf[32];
-            int len = sprintf (txBuf, "RSVP %d\r\n", n);
-            rc = conBle::sendBle (txBuf, len);
-            ++n;
+            //readAndSendCo2();
         }
-    } while (rc == ESP_OK);
+    } 
 
     ESP_LOGE (tag, "sendBle failed, rc = %d, stopping app_main", rc);
+
+}
+// ===============================================================================
+extern "C"
+void app_main () 
+{
+    ESP_LOGI (tag, "starting app_main");
+
+    esp_reset_reason_t resetReason = esp_reset_reason();
+
+    if (resetReason == ESP_RST_POWERON || resetReason == ESP_RST_SW) {
+        ESP_RETURN_VOID_ON_ERROR(nvsInit(), tag, "nvs flash init failed");
+
+        ESP_LOGI (tag, "NVS initialized, starting BLE test");
+        
+        conBle::receiveBleQueue = xQueueCreate (16, sizeof(conBle::BleData));
+
+        conBle::startBle("CO2 Sensor");
+
+        if (mhz19uart.init() == ESP_OK) {
+            mainLoop();
+        }
+        mhz19uart.deinit();
+    }
+    else {
+        ESP_LOGI (tag, "Stop processing due to reset reason %d", resetReason);
+    }
+
+    ESP_LOGI (tag, "Finish");
+
 }
