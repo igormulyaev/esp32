@@ -10,8 +10,8 @@ class Mhz19UartImpl
         Mhz19UartImpl() = default;
         ~Mhz19UartImpl() = default;
 
-        static esp_err_t init(uart_port_t uartNum, gpio_num_t txPin, gpio_num_t rxPin);
-        static esp_err_t deinit (uart_port_t uartNum, gpio_num_t txPin, gpio_num_t rxPin);
+        static esp_err_t init(uart_port_t uartNum, gpio_num_t txPin, gpio_num_t rxPin, const char * &err);
+        static esp_err_t deinit (uart_port_t uartNum, gpio_num_t txPin, gpio_num_t rxPin, const char * &err);
 
         esp_err_t readCo2 (int &co2, int &temperature, uart_port_t uartNum, gpio_num_t txPin, gpio_num_t rxPin, const char * &err, bool isDebug = false);
 
@@ -33,15 +33,15 @@ class Mhz19Uart
         Mhz19Uart() = default;
         ~Mhz19Uart() = default;
 
-        esp_err_t init() 
+        esp_err_t init(const char * &err) 
         {
             T *t = static_cast<T*>(this);
-            return impl.init(t->uartNum, t->txPin, t->rxPin);
+            return impl.init(t->uartNum, t->txPin, t->rxPin, err);
         }
-        esp_err_t deinit ()
+        esp_err_t deinit (const char * &err)
         {
             T *t = static_cast<T*>(this);
-            return impl.deinit(t->uartNum, t->txPin, t->rxPin);
+            return impl.deinit(t->uartNum, t->txPin, t->rxPin, err);
         }
 
         esp_err_t readCo2 (int &co2, int &temperature, const char * &err, bool isDebug = false)

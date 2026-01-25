@@ -2,9 +2,14 @@
 #include "esp_check.h"
 
 // ===================================================================================================
-esp_err_t Mhz19UartImpl :: init(uart_port_t uartNum, gpio_num_t txPin, gpio_num_t rxPin)
+esp_err_t Mhz19UartImpl :: init(uart_port_t uartNum, gpio_num_t txPin, gpio_num_t rxPin, const char * &err)
 {
-    ESP_RETURN_ON_ERROR (uart_driver_install (uartNum, 129 /* minimum size, must be > 128 */, 0, 0, nullptr, 0), tag, "uart_driver_install failed");
+    esp_err_t rc = uart_driver_install (uartNum, 129 /* minimum size, must be > 128 */, 0, 0, nullptr, 0);
+    if (rc != ESP_OK) {
+        err = "uart_driver_install failed";
+        ESP_LOGE (tag, "%s", err);
+        return rc;
+    }
 
     uart_config_t uartConfig = {
         .baud_rate = baudRate,
@@ -20,17 +25,36 @@ esp_err_t Mhz19UartImpl :: init(uart_port_t uartNum, gpio_num_t txPin, gpio_num_
         },
     };
 
-    ESP_RETURN_ON_ERROR (uart_param_config(uartNum, &uartConfig), tag, "uart_param_config failed");
+    rc = uart_param_config (uartNum, &uartConfig);
+    if (rc != ESP_OK) {
+        err = "uart_param_config failed";
+        ESP_LOGE (tag, "%s", err);
+        return rc;
+    }
 
-    ESP_RETURN_ON_ERROR (uart_set_pin (uartNum, txPin, rxPin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE), tag, "uart_set_pin failed");
+    rc = uart_set_pin (uartNum, txPin, rxPin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    if (rc != ESP_OK) {
+        err = "uart_set_pin failed";
+        ESP_LOGE (tag, "%s", err);
+        return rc;
+    }
 
+    err = nullptr;
     return ESP_OK;
 }
 
 // ===================================================================================================
-esp_err_t Mhz19UartImpl :: deinit (uart_port_t uartNum, gpio_num_t txPin, gpio_num_t rxPin)
+esp_err_t Mhz19UartImpl :: deinit (uart_port_t uartNum, gpio_num_t txPin, gpio_num_t rxPin, const char * &err)
 {
-    return ESP_OK;
+    esp_err_t rc = uart_driver_delete (uartNum);
+    if (rc != ESP_OK) {
+        err = "uart_driver_delete failed";
+        ESP_LOGE (tag, "%s", err);
+    }
+    else {
+        err = nullptr;
+    }
+    return rc;
 }
 
 // ===================================================================================================
@@ -71,6 +95,9 @@ esp_err_t Mhz19UartImpl :: readCo2 (int &co2, int &temperature, uart_port_t uart
         sprintf (errorMsg, "Response: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x", response[0], response[1], response[2], response[3], response[4], response[5], response[6], response[7], response[8]);
         err = errorMsg;
         ESP_LOGI (tag, "%s", err);
+    }
+    else {
+        err = nullptr;
     }
 
     co2 = (response[2] << 8) | response[3];
