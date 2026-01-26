@@ -72,7 +72,17 @@ esp_err_t readAndSendCo2 ()
 // ===============================================================================
 esp_err_t calibrateZero () 
 {
-    return conBle::sendBle ("Calibration isn't implemented\r\n", 31);
+    const char * res = nullptr;
+    mhz19uart.calibrateZero (res);
+    return sendErr (res);
+}
+
+// ===============================================================================
+esp_err_t readAlarm () 
+{
+    const char * res = nullptr;
+    mhz19uart.readAlarm (res);
+    return sendErr (res);
 }
 
 // ===============================================================================
@@ -130,13 +140,17 @@ esp_err_t onCommand (const std::string_view &cmd)
     else if (cmd == "calibrate") {
         return calibrateZero ();
     }
+    else if (cmd == "alarm") {
+        return readAlarm ();
+    }
     else if (cmd == "help") {
         const char * helpStr =
             "init\r\n"
             "deinit\r\n"
             "read [n]\r\n"
             "debug on|off\r\n"
-            "calibrate\r\n";
+            "calibrate\r\n"
+            "alarm\r\n";
         return conBle::sendBle (helpStr, strlen(helpStr));
     }
     else {

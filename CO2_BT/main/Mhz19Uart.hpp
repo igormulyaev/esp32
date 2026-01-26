@@ -14,11 +14,37 @@ class Mhz19UartImpl
         static esp_err_t deinit (uart_port_t uartNum, gpio_num_t txPin, gpio_num_t rxPin, const char * &err);
 
         esp_err_t readCo2 (int &co2, int &temperature, uart_port_t uartNum, gpio_num_t txPin, gpio_num_t rxPin, const char * &err, bool isDebug = false);
+        
+        esp_err_t calibrateZero (uart_port_t uartNum, gpio_num_t txPin, gpio_num_t rxPin, const char * &res) 
+        {
+            uint8_t buf[cmdSize];
+            return sendCommand (requestCalibration, buf, uartNum, txPin, rxPin, res, true);
+        }
+
+        esp_err_t readAlarm (uart_port_t uartNum, gpio_num_t txPin, gpio_num_t rxPin, const char * &res) 
+        {
+            uint8_t buf[cmdSize];
+            return sendCommand (requestAlarm, buf, uartNum, txPin, rxPin, res, true);
+        }
 
     private:
+        esp_err_t sendCommand (
+            const uint8_t * command
+            , uint8_t * buf
+            , uart_port_t uartNum
+            , gpio_num_t txPin
+            , gpio_num_t rxPin
+            , const char * &res
+            , bool isDebug = false
+        );
+
         static const char * const tag;
         static constexpr int baudRate = 9600;
-        static const uint8_t request[9];
+        static constexpr size_t cmdSize = 9;
+
+        static const uint8_t requestVal[cmdSize];
+        static const uint8_t requestCalibration[cmdSize];
+        static const uint8_t requestAlarm[cmdSize];
 
         char errorMsg[128];
 
@@ -48,6 +74,18 @@ class Mhz19Uart
         {
             T *t = static_cast<T*>(this);
             return impl.readCo2(co2, temperature, t->uartNum, t->txPin, t->rxPin, err, isDebug);
+        }
+
+        esp_err_t calibrateZero (const char * &res)
+        {
+            T *t = static_cast<T*>(this);
+            return impl.calibrateZero(t->uartNum, t->txPin, t->rxPin, res);
+        }
+
+        esp_err_t readAlarm (const char * &res)
+        {
+            T *t = static_cast<T*>(this);
+            return impl.readAlarm(t->uartNum, t->txPin, t->rxPin, res);
         }
 
     private:

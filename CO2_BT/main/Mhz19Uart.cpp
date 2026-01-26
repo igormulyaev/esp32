@@ -60,39 +60,61 @@ esp_err_t Mhz19UartImpl :: deinit (uart_port_t uartNum, gpio_num_t txPin, gpio_n
 // ===================================================================================================
 esp_err_t Mhz19UartImpl :: readCo2 (int &co2, int &temperature, uart_port_t uartNum, gpio_num_t txPin, gpio_num_t rxPin, const char * &err, bool isDebug)
 {
-    int rc = uart_write_bytes (uartNum, request, sizeof (request));
+    uint8_t buf[cmdSize];
+    esp_err_t rc = sendCommand (requestVal, buf, uartNum, txPin, rxPin, err, isDebug);
+    if (rc != ESP_OK) {
+        return rc;
+    }
+    co2 = (buf[2] << 8) | buf[3];
+
+    temperature = buf[4] != 0 ? buf[4] - 40 : INT_MIN;
+    
+    return ESP_OK;
+}
+
+// ===================================================================================================
+esp_err_t Mhz19UartImpl :: sendCommand (
+    const uint8_t * command
+    , uint8_t * buf
+    , uart_port_t uartNum
+    , gpio_num_t txPin
+    , gpio_num_t rxPin
+    , const char * &err
+    , bool isDebug
+)
+{
+    int rc = uart_write_bytes (uartNum, command, cmdSize);
     if (rc < 0) {
         err = "uart_write_bytes failed";
         ESP_LOGE (tag, "%s", err);
         return ESP_FAIL;
     }
 
-    uint8_t response[9];
-    int len = uart_read_bytes (uartNum, response, sizeof (response), pdMS_TO_TICKS (200));
+    int len = uart_read_bytes (uartNum, buf, cmdSize, pdMS_TO_TICKS (200));
     if (len < 0) {
         err = "uart_read_bytes failed";
         ESP_LOGE (tag, "%s", err);
         return ESP_FAIL;
     }
 
-    if (len != sizeof(response)) {
-        sprintf (errorMsg, "Wrong response received: expected %d bytes, got %d bytes", sizeof(response), len);
+    if (len != cmdSize) {
+        sprintf (errorMsg, "Wrong response received: expected %d bytes, got %d bytes", cmdSize, len);
         err = errorMsg;
         ESP_LOGE (tag, "%s", err);
         return ESP_FAIL;
     }
 
-    uint8_t checksum = response[0] + response[1] + response[2] + response[3] + response[4] + response[5] + response[6] + response[7] + response[8];
+    uint8_t checksum = buf[0] + buf[1] + buf[2] + buf[3] + buf[4] + buf[5] + buf[6] + buf[7] + buf[8];
 
     if (checksum != 0xff) {
-        sprintf (errorMsg, "Checksum mismatch: calculated %02x, expected 0xFF, data %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x", checksum, response[0], response[1], response[2], response[3], response[4], response[5], response[6], response[7], response[8]);
+        sprintf (errorMsg, "Checksum mismatch: calculated %02x, expected 0xFF, data %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x", checksum, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], buf[8]);
         err = errorMsg;
         ESP_LOGE (tag, "%s", err);
         return ESP_FAIL;
     }
 
     if (isDebug) {
-        sprintf (errorMsg, "Response: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x", response[0], response[1], response[2], response[3], response[4], response[5], response[6], response[7], response[8]);
+        sprintf (errorMsg, "Raw: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], buf[8]);
         err = errorMsg;
         ESP_LOGI (tag, "%s", err);
     }
@@ -100,13 +122,11 @@ esp_err_t Mhz19UartImpl :: readCo2 (int &co2, int &temperature, uart_port_t uart
         err = nullptr;
     }
 
-    co2 = (response[2] << 8) | response[3];
-    
-    temperature = response[4] != 0 ? response[4] - 40 : INT_MIN;
-
     return ESP_OK;
 }
 
 // ===================================================================================================
 const char * const Mhz19UartImpl :: tag = "Mhz19Uart";
-const uint8_t  Mhz19UartImpl :: request[9] = {0xFF, 0x01, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x79};
+const uint8_t  Mhz19UartImpl :: requestVal[cmdSize] = {0xFF, 0x01, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x79};
+const uint8_t  Mhz19UartImpl :: requestCalibration[cmdSize] = {0xFF, 0x01, 0x87, 0x00, 0x00, 0x00, 0x00, 0x00, 0x78};
+const uint8_t  Mhz19UartImpl :: requestAlarm[cmdSize] = {0xFF, 0x01, 0x85, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7A};
