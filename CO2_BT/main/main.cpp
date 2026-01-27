@@ -117,26 +117,6 @@ esp_err_t onCommand (const std::string_view &cmd)
         }
         return readAndSendCo2 ();
     }
-    else if (cmd == "init") {
-        const char * err = nullptr;
-        esp_err_t rc = mhz19uart.init (err);
-        if (rc != ESP_OK) {
-            return sendErr (err);
-        }
-        else {
-            return conBle::sendBle ("Initialized\r\n", 13);
-        }
-    }
-    else if (cmd == "deinit") {
-        const char * err = nullptr;
-        esp_err_t rc = mhz19uart.deinit (err);
-        if (rc != ESP_OK) {
-            return sendErr (err);
-        }
-        else {
-            return conBle::sendBle ("Deinitialized\r\n", 15);
-        }
-    }
     else if (cmd == "calibrate") {
         return calibrateZero ();
     }
@@ -145,8 +125,6 @@ esp_err_t onCommand (const std::string_view &cmd)
     }
     else if (cmd == "help") {
         const char * helpStr =
-            "init\r\n"
-            "deinit\r\n"
             "read [n]\r\n"
             "debug on|off\r\n"
             "calibrate\r\n"
@@ -243,6 +221,9 @@ void app_main ()
 
     if (resetReason == ESP_RST_POWERON || resetReason == ESP_RST_SW) {
         ESP_RETURN_VOID_ON_ERROR(nvsInit(), tag, "nvs flash init failed");
+
+        const char * err = nullptr;
+        ESP_RETURN_VOID_ON_ERROR(mhz19uart.init(err), tag, "mhz19uart init failed: %s", err);
 
         ESP_LOGI (tag, "NVS initialized, starting BLE test");
         
