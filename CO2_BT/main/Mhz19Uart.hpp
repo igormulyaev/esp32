@@ -27,6 +27,12 @@ class Mhz19UartImpl
             return sendCommand (requestAlarm, buf, uartNum, txPin, rxPin, res, true);
         }
 
+        esp_err_t dryRead (uart_port_t uartNum, gpio_num_t txPin, gpio_num_t rxPin, const char * &res)
+        {
+            uint8_t buf[cmdSize];
+            return sendCommand (nullptr, buf, uartNum, txPin, rxPin, res, true);
+        }
+
     private:
         esp_err_t sendCommand (
             const uint8_t * command
@@ -86,6 +92,12 @@ class Mhz19Uart
         {
             T *t = static_cast<T*>(this);
             return impl.readAlarm(t->uartNum, t->txPin, t->rxPin, res);
+        }
+
+        esp_err_t dryRead (const char * &res)
+        {
+            T *t = static_cast<T*>(this);
+            return impl.dryRead(t->uartNum, t->txPin, t->rxPin, res);
         }
 
     private:

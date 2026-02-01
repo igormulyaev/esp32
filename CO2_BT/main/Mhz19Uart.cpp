@@ -83,8 +83,7 @@ esp_err_t Mhz19UartImpl :: sendCommand (
     , bool isDebug
 )
 {
-    int rc = uart_write_bytes (uartNum, command, cmdSize);
-    if (rc < 0) {
+    if (command != nullptr && uart_write_bytes (uartNum, command, cmdSize) < 0) {
         err = "uart_write_bytes failed";
         ESP_LOGE (tag, "%s", err);
         return ESP_FAIL;
