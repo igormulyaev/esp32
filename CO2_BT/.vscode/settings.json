@@ -16,5 +16,6 @@
     "--compile-commands-dir=c:\\Users\\j\\Projects\\esp32\\BT\\build"
   ],
   "idf.flashType": "UART",
-  "idf.portWin": "COM3"
+  "idf.portWin": "COM3",
+  "idf.currentSetup": "C:\\Users\\j\\esp\\v5.5.2\\esp-idf"
 }

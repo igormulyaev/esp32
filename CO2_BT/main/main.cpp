@@ -5,6 +5,7 @@
 #include "esp_check.h"
 #include "nvs_flash.h"
 #include "freertos/FreeRTOS.h"
+#include "tickTracker.hpp"
 
 #include "consoleBle.hpp"
 #include "Mhz19Uart.hpp"
@@ -32,11 +33,8 @@ enum BleEvents {
 
 static std::string receivedData;
 
-static TickType_t sensorScanNext = portMAX_DELAY;
-static TickType_t sensorScanPeriod = 0; // Disabled by default
-
-static TickType_t consoleSendNext = portMAX_DELAY;
-static TickType_t consoleSendPeriod = 0; // Disabled by default
+static TickTracker sensorTracker;
+static TickTracker consoleTracker;
 
 static bool isDebug = false;
 
@@ -117,8 +115,7 @@ esp_err_t onCommand (const std::string_view &cmd)
     ESP_LOGI (tag, "Command: %.*s", (int)cmd.size(), cmd.data());
 
     // Disable periodic sending by default
-    consoleSendPeriod = 0; 
-    consoleSendNext = portMAX_DELAY;
+    consoleTracker.setPeriod(0);
 
     if (cmd == "debug on") {
         isDebug = true;
@@ -140,8 +137,7 @@ esp_err_t onCommand (const std::string_view &cmd)
                 if (rc != ESP_OK) {
                     return rc;
                 }
-                consoleSendPeriod = readInterval * 1000 / portTICK_PERIOD_MS;
-                consoleSendNext = xTaskGetTickCount() + consoleSendPeriod;
+                consoleTracker.setPeriod(readInterval * 1000 / portTICK_PERIOD_MS);
             }
         }
         return readAndSendCo2 ();
@@ -178,7 +174,7 @@ esp_err_t onSubscribe ()
 // ===============================================================================
 esp_err_t onUnsubscribe () 
 {
-    consoleSendNext = portMAX_DELAY;
+    consoleTracker.setPeriod(0);
     return ESP_OK;
 }
 
@@ -232,24 +228,12 @@ void mainLoop ()
 
         case Event_Timeout: {
             TickType_t now = xTaskGetTickCount();
-            if (now >= sensorScanNext) {
-                if (sensorScanPeriod == 0) {
-                    // Disabled
-                    sensorScanNext = portMAX_DELAY;
-                }
-                else {
-                    sensorScanNext += sensorScanPeriod;
-                }
+            if (sensorTracker.isDue(now)) {
+                sensorTracker.updateNext();
                 rc = sensorScan ();
             }
-            if (now >= consoleSendNext) {
-                if (consoleSendPeriod == 0) {
-                    // Disabled
-                    consoleSendNext = portMAX_DELAY;
-                }
-                else {
-                    consoleSendNext += consoleSendPeriod;
-                }
+            if (consoleTracker.isDue(now)) {
+                consoleTracker.updateNext();
                 rc = consoleSend ();
             }
             break;
@@ -263,29 +247,11 @@ void mainLoop ()
 }
 
 // ===============================================================================
-TickType_t getTimeToNextEvent()
-{
-    TickType_t now = xTaskGetTickCount();
-    TickType_t timeToSensor = (sensorScanNext == portMAX_DELAY)
-        ? portMAX_DELAY
-        : (sensorScanNext > now) 
-            ? (sensorScanNext - now)
-            : 0;
-    TickType_t timeToConsole = (consoleSendNext == portMAX_DELAY)
-        ? portMAX_DELAY
-        : (consoleSendNext > now)
-            ? (consoleSendNext - now)
-            : 0;
-
-    return (timeToSensor < timeToConsole) ? timeToSensor : timeToConsole;
-}
-
-// ===============================================================================
 BleEvents bleProcess () 
 {
     conBle::BleData rxBuf;
     
-    TickType_t timeToWait = getTimeToNextEvent();
+    TickType_t timeToWait = sensorTracker.getTimeToNextEvent(consoleTracker.getTimeToNextEvent());
     
     if (xQueueReceive(conBle::receiveBleQueue, &rxBuf, timeToWait) == pdTRUE) {
         if (rxBuf.str.length != 0) {
